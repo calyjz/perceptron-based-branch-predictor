@@ -395,6 +395,7 @@ expectedUpdatedPerceptron:
 	.byte 3
 	.byte 4
 	.byte 2
+ 	.byte -1
 
 .text
 main:
