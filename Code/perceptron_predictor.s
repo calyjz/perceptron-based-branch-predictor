@@ -90,7 +90,15 @@ ret
 #	
 # -----------------------------------------------------------------------------		
 fill_instructionIndicatorsArray:
+	#iterate through the original instructions array
+		#if instruction is a branch instruction, otherwise go to next i
+			#add 1 to instructionindicatorarray[i]
 
+			#get immediate (difference in address between branch and target)
+			#divide immediate by 4 (difference in instructions between branch and target)
+			#add 2 to instructionindicatorarray[i + immediate//4)
+			
+		
 ret
 # -----------------------------------------------------------------------------
 # fill_numPriorInsertionsArray:
