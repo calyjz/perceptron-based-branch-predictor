@@ -1,4 +1,3 @@
-This is your modifiedInstructionsArray:
 0xfec10113
 0x00812023
 0x00912223
@@ -54,9 +53,9 @@ This is your modifiedInstructionsArray:
 0x01410113
 0x00008067
 These are your final perceptron weights:
-Branch id 0: [ -22 -20 -18 -16 -14 -12 -10 -8 -6 ]
+Branch id 0: [ -14 -12 14 14 14 14 14 14 14 ]
 
-Branch id 1: [ -69 -41 -35 -27 -19 -7 7 23 43 ]
+Branch id 1: [ -27 27 13 13 15 15 15 17 17 ]
 Total branch instructions executed: 961
-Total correct predictions: 927
-Branch predictor accuracy: 96.46202%
+Total correct predictions: 928
+Branch predictor accuracy: 96.56608%

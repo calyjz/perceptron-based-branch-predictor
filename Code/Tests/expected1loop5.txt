@@ -1,4 +1,3 @@
-This is your modifiedInstructionsArray:
 0xff410113
 0x00812023
 0x00912223

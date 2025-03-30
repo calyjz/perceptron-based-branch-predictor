@@ -395,7 +395,6 @@ expectedUpdatedPerceptron:
 	.byte 3
 	.byte 4
 	.byte 2
- 	.byte -1
 
 .text
 main:
@@ -725,6 +724,8 @@ runTests:
 		la t1, patternHistoryTable
 		lw a0, 12(t1) # load fourth perceptron
 		li a2, 9 # number of weights
+		li a3, 0
+		
 		jal ra, equals_perceptron
 		
 		beqz a0, test_trainPredictorPass
@@ -740,7 +741,8 @@ runTests:
 		ecall
 	
 		la a0, expectedUpdatedPerceptron
-		jal ra, printIntByteArray
+
+		jal ra, print_perceptron
 		
 		la a0, actual
 		li a7, 4
@@ -748,7 +750,8 @@ runTests:
 
 		la t1, patternHistoryTable
 		lw a0, 12(t1) # load fourth perceptron
-		jal ra, printIntByteArray
+
+		jal ra, print_perceptron
 		
 		j finish_testing
 	
@@ -810,12 +813,15 @@ printIntByteArray:
 	sw ra, 4(sp)
 		
 	mv s0, a0
+	li t3, 150 # print no more than 150
+	li t4, 0
 
 	print_byte_loop:
 		
 		lb t1, 0(s0)            # current element
 		li t2, -1               # sentinel
-		beq t1, t2, print_byte_done        
+		beq t1, t2, print_byte_done     
+		bgt t4, t3, print_byte_done    
 		
 		# Print the integer in t1
 		mv a0, t1              
@@ -828,6 +834,7 @@ printIntByteArray:
 		ecall                 # print
 		
 		addi s0, s0, 1        # move to the next element in the array
+		addi t4, t4, 1
 		j print_byte_loop                  
 
 	print_byte_done:
@@ -863,12 +870,15 @@ printIntWordArray:
 		
 	mv s0, a0
 	mv s1, a1
+	li t3, 150 # print no more than 150
+	li t4, 0
 
 	print_word_loop:
 		
 		lw t1, 0(s0)            # current element
 		li t2, -1               # sentinel
-		beq t1, t2, print_word_done        
+		beq t1, t2, print_word_done    
+		bgt t4, t3, print_word_done     
 		
 		beqz s1, print_decimal
 		# Print a newline
@@ -896,6 +906,7 @@ printIntWordArray:
 
 		increment_print_word_loop:
 		addi s0, s0, 4          # move to the next element in the array
+		addi t4,t4,1
 		j print_word_loop                  
 
 	print_word_done:
@@ -1082,12 +1093,12 @@ equals_perceptron:
 	# load byte from both arrays
 	lb t0, 0(a0)
 	lb t1, 0(a1)
+
+	# check if we've reached the end of the array
+	beq a3, a2, equal_pass
 	    
 	# check if it doesn't equal each other, fail
 	bne t0, t1, equal_fail
-	
-	# check if we've reached the end of the array
-	beq a3, a2, equal_pass
 	
 	# increment for next iteration
 	addi a0, a0, 1
@@ -1107,6 +1118,39 @@ equals_perceptron:
 	# return 0 for a pass
 	li a0, 0
 	ret
+
+#----------------------------------------------------------------------------------------------
+# strToInt
+# Prints a perceptron.
+#
+# Arguments:
+#    a0: The pointer to the weights array
+#
+# Returns:
+#     None
+#----------------------------------------------------------------------------------------------
+print_perceptron:
+
+	li t0, 9              # 9 weights
+	mv t3, a0
+	
+	
+	print_loop:
+		beqz t0, end_print    
+		lb a0, 0(t3)   
+		sb a0, 0(t3)      
+		li a7, 1                        
+		ecall
+		la a0, space          # load the address of a space
+		li a7, 4              # ecall for print string
+		ecall                 # print
+		addi t3, t3, 1        
+		addi t0, t0, -1       
+		j print_loop
+
+end_print:
+    ret
+
 	
 
 #----------------------------------------------------------------------------------------------
