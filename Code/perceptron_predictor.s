@@ -87,19 +87,67 @@ ret
 # 	None
 #
 # Register Usage:
+# 	s0: Pointer to originalInstructionsArray
+#	s1: Pointer to instructionIndicatorsArray
+#	s2: index i
 #	
 # -----------------------------------------------------------------------------		
 fill_instructionIndicatorsArray:
+ebreak
+	addi sp, sp, -24
+	sw s0, 0(sp)
+	sw s1, 4(sp)
+	sw s2, 8(sp)
+	sw s3, 12(sp)
+	sw s4, 16(sp)
+	sw s5, 20(sp)
+
+	mv s0, a0 #s0 <- Pointer to originalInstructionsArray
+	mv s1, a1 #s1 <- Pointer to instructionIndicatorsArray
+	li s3, -1
+	lw s4, 99 #s4 <- opcode for branch
+
+	lw s2, 0(s0)
+	beq s2, s3, fillInstructionEnd
+
 	#iterate through the original instructions array
-		#if instruction is a branch instruction, otherwise go to next i
-			#add 1 to instructionindicatorarray[i]
+	fillInstructionLoop:
+		addi s0, s0, 4
+		addi s1, s1, 4
 
-			#get immediate (difference in address between branch and target)
-			#divide immediate by 4 (difference in instructions between branch and target)
-			#add 2 to instructionindicatorarray[i + immediate//4)
-
+		#end condition: if originalInstructions[i] == -1
+		lw s2, 0(s0)
+		beq s2, s3, fillInstructionEnd
 		
-ret
+		#break: if not branch instruction
+		li s5, 0x7F
+		and s5, s5, s2
+		bne s2, s4, fillInstructionLoop
+
+		lw s5, 0(s0)
+		addi s5, s5, 1
+		sw s5, 0(s0)
+
+		lw a0, s2
+		jal ra, getBranchImm
+		mv s6, a0 #s5 <- immediate of branch instruction
+
+		addi s6, s6, s1 #s5 <- &instructionIndicator[i] + immediate
+		lw s5, 0(s6)
+		addi s5, s5, 2
+		sw s5, 0(s6)
+
+
+	fillInstructionEnd:
+
+	lw s0, 0(sp)
+	lw s1, 4(sp)
+	lw s2, 8(sp)
+	lw s3, 12(sp)
+	lw s4, 16(sp)
+	lw s5, 20(sp)
+	addi sp, sp, 24
+	ret
 # -----------------------------------------------------------------------------
 # fill_numPriorInsertionsArray:
 #
@@ -120,7 +168,7 @@ fill_numPriorInsertionsArray:
 	#last value = 0
 	#branch last = 0
 	#iterate through the instructiondindicatorsarray
-		#last value += branch last (+4 or +0)
+		#last value += branch last (+4 or +0) #accounts for fallthrough resolve
 
 		#if instruction[i] = 1:
 			#last value += 7
@@ -156,6 +204,8 @@ ret
 #
 # -----------------------------------------------------------------------------		
 fill_modifiedInstructionsArray:
+#for branch instructions
+#for a target, the offset would be branch immediate//4 + numPriorInsertions[target] - numPriorInstructions[branch]
 
 ret
 # -----------------------------------------------------------------------------
