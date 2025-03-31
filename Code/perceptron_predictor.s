@@ -115,7 +115,7 @@ fill_instructionIndicatorsArray:
 	#iterate through the original instructions array
 	fillInstructionLoop:
 		addi s0, s0, 4
-		addi s1, s1, 4
+		addi s1, s1, 1
 
 		#end condition: if originalInstructions[i] == -1
 		lw s2, 0(s0)
@@ -138,6 +138,7 @@ fill_instructionIndicatorsArray:
 		add s7, s6, s0
 		lw s7, 0(s7)
 		
+		srli s6, s6, 2 #s6 <- s6 //4
 		add s6, s6, s1 #s5 <- &instructionIndicator[i] + immediate
 		lw s5, 0(s6)
 		addi s5, s5, 2
