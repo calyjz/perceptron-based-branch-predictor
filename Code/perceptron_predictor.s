@@ -93,19 +93,21 @@ ret
 #	
 # -----------------------------------------------------------------------------		
 fill_instructionIndicatorsArray:
-ebreak
-	addi sp, sp, -24
-	sw s0, 0(sp)
-	sw s1, 4(sp)
-	sw s2, 8(sp)
-	sw s3, 12(sp)
-	sw s4, 16(sp)
-	sw s5, 20(sp)
-
+	addi sp, sp, -36
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	sw s6, 28(sp)
+	sw s7, 32(sp)
+	
 	mv s0, a0 #s0 <- Pointer to originalInstructionsArray
 	mv s1, a1 #s1 <- Pointer to instructionIndicatorsArray
 	li s3, -1
-	lw s4, 99 #s4 <- opcode for branch
+	li s4, 99 #s4 <- opcode for branch
 
 	lw s2, 0(s0)
 	beq s2, s3, fillInstructionEnd
@@ -122,31 +124,43 @@ ebreak
 		#break: if not branch instruction
 		li s5, 0x7F
 		and s5, s5, s2
-		bne s2, s4, fillInstructionLoop
+		bne s5, s4, fillInstructionLoop
 
-		lw s5, 0(s0)
+
+		lw s5, 0(s1)
 		addi s5, s5, 1
-		sw s5, 0(s0)
+		sw s5, 0(s1)
 
-		lw a0, s2
+		mv a0, s2
 		jal ra, getBranchImm
 		mv s6, a0 #s5 <- immediate of branch instruction
-
-		addi s6, s6, s1 #s5 <- &instructionIndicator[i] + immediate
+		
+		add s7, s6, s0
+		lw s7, 0(s7)
+		
+		add s6, s6, s1 #s5 <- &instructionIndicator[i] + immediate
 		lw s5, 0(s6)
 		addi s5, s5, 2
 		sw s5, 0(s6)
+		
+		j fillInstructionLoop
 
 
 	fillInstructionEnd:
-
-	lw s0, 0(sp)
-	lw s1, 4(sp)
-	lw s2, 8(sp)
-	lw s3, 12(sp)
-	lw s4, 16(sp)
-	lw s5, 20(sp)
-	addi sp, sp, 24
+	ebreak
+	sw s3, 0(s1) #store -1 at the end of instructionIndicator Array
+	
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	lw s6, 28(sp)
+	lw s7, 32(sp)
+	ebreak
+	addi sp, sp, 36
 	ret
 # -----------------------------------------------------------------------------
 # fill_numPriorInsertionsArray:
