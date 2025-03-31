@@ -97,7 +97,7 @@ fill_instructionIndicatorsArray:
 			#get immediate (difference in address between branch and target)
 			#divide immediate by 4 (difference in instructions between branch and target)
 			#add 2 to instructionindicatorarray[i + immediate//4)
-			
+
 		
 ret
 # -----------------------------------------------------------------------------
@@ -117,6 +117,22 @@ ret
 #
 # -----------------------------------------------------------------------------		
 fill_numPriorInsertionsArray:
+	#last value = 0
+	#branch last = 0
+	#iterate through the instructiondindicatorsarray
+		#last value += branch last (+4 or +0)
+
+		#if instruction[i] = 1:
+			#last value += 7
+			#branch last = 4
+		#if instruction[i] = 2:
+			#last value += 4
+			#branch last = 4
+		#if instruction[i] = 3:
+			#last value += 11
+			#branch last = 4
+		
+		#numPrior[i] = last value
 
 ret
 # -----------------------------------------------------------------------------
