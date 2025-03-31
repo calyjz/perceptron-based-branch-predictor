@@ -125,31 +125,33 @@ fill_instructionIndicatorsArray:
 		li s5, 0x7F
 		and s5, s5, s2
 		bne s5, s4, fillInstructionLoop
+		ebreak
 
 
-		lw s5, 0(s1)
+		lb s5, 0(s1)
 		addi s5, s5, 1
-		sw s5, 0(s1)
+		sb s5, 0(s1)
 
 		mv a0, s2
 		jal ra, getBranchImm
+		ebreak
 		mv s6, a0 #s5 <- immediate of branch instruction
 		
 		add s7, s6, s0
 		lw s7, 0(s7)
 		
-		srli s6, s6, 2 #s6 <- s6 //4
+		srai s6, s6, 2 #s6 <- s6 //4
 		add s6, s6, s1 #s5 <- &instructionIndicator[i] + immediate
-		lw s5, 0(s6)
+		lb s5, 0(s6)
 		addi s5, s5, 2
-		sw s5, 0(s6)
+		sb s5, 0(s6)
 		
 		j fillInstructionLoop
 
 
 	fillInstructionEnd:
 	ebreak
-	sw s3, 0(s1) #store -1 at the end of instructionIndicator Array
+	sb s3, 0(s1) #store -1 at the end of instructionIndicator Array
 	
 	lw ra, 0(sp)
 	lw s0, 4(sp)
