@@ -28,11 +28,11 @@
 #          cmput229@ualberta.ca
 #
 #------------------------------------------------------------------------------
-# CCID:                 
-# Lecture Section:      
-# Instructor:           
-# Lab Section:          
-# Teaching Assistant:   
+# CCID: cjzheng
+# Lecture Section: B1
+# Instructor: J Nelson Amaral
+# Lab Section: H02
+# Teaching Assistant: Patrick Zijlstra
 #-----------------------------------------------------------------------------
 .data 
 
@@ -72,7 +72,7 @@ numCorrectPredictions:			.word 0
 #
 # -----------------------------------------------------------------------------	
 perceptronPredictor:
-
+	#set instruction indicatiors, numpriors, and modified instructions array to 0
 ret
 # -----------------------------------------------------------------------------
 # fill_instructionIndicatorsArray:
@@ -107,6 +107,21 @@ fill_instructionIndicatorsArray:
 	mv s0, a0 #s0 <- Pointer to originalInstructionsArray
 	mv s1, a1 #s1 <- Pointer to instructionIndicatorsArray
 	li s3, -1
+
+	#set all values to 0
+	mv s2, s0
+	mv s4, s1
+	fillInstructionZeroLoop:
+	lw s5, 0(s2) #check if value == -1
+	beq s3, s5, fillInstructionZeroLoopEnd
+
+	sb zero, 0(s4) #store zero in instructionindicator array
+	addi s2, s2, 4
+	addi s1, s1, 4
+	j fillInstructionZeroLoop
+	fillInstructionZeroLoopEnd:
+	
+
 	li s4, 99 #s4 <- opcode for branch
 
 	lw s2, 0(s0)
@@ -182,23 +197,70 @@ fill_instructionIndicatorsArray:
 #
 # -----------------------------------------------------------------------------		
 fill_numPriorInsertionsArray:
-	#last value = 0
-	#branch last = 0
-	#iterate through the instructiondindicatorsarray
-		#last value += branch last (+4 or +0) #accounts for fallthrough resolve
+	addi sp, sp, -36
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	sw s6, 28(sp)
+	sw s7, 32(sp)
 
-		#if instruction[i] = 1:
-			#last value += 7
-			#branch last = 4
-		#if instruction[i] = 2:
-			#last value += 4
-			#branch last = 4
-		#if instruction[i] = 3:
-			#last value += 11
-			#branch last = 4
+	mv s0, a0
+	mv s1, a1
+
+	li s2, 0 #s2 <- current value
+	li s3, 0 #s3 <- branch previous (4 if true, 0 if false)
+	li s4, -1 #s4 <- end condition
+
+	fillNumPriorLoop:
+		lw s5, 0(s0) #s4 <- instructionindicator[i]
+		beq s4, s5, fillNumPriorEnd
+
+		add s2, s2, s3 ##s2 <- s2 + 0 or s2 + 4, accounts for fallthrough resolve
+		li s3, 0 #reset branch previous
+
+		li s6, 1
+		beq s5, s6, fillBranch
+		li s6, 2
+		beq s5, s6, fillTarget
+		li s6, 3
+		beq s5, s6, fillBranchAndTarget
+		j storePrior
 		
-		#numPrior[i] = last value
+		fillBranch:
+			addi s2, s2, 7
+			li s3, 4
+			j storePrior
+		fillTarget:
+			addi s2, s2, 4
+			j storePrior
+		fillBranchAndTarget:
+			addi s2, s2, 11
+			li s3, 4
+			j storePrior
+		
+		storePrior:
+		sw s2, 0(s1) #numPrior[i] = last value
 
+		addi s0, s0, 1
+		addi s1, s1, 4
+		j fillNumPriorLoop
+	
+	fillNumPriorEnd:
+	
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	lw s6, 28(sp)
+	lw s7, 32(sp)
+	addi sp, sp, 36
 ret
 # -----------------------------------------------------------------------------
 # fill_modifiedInstructionsArray:
