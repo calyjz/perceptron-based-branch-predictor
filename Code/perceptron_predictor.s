@@ -140,7 +140,6 @@ fill_instructionIndicatorsArray:
 		li s5, 0x7F
 		and s5, s5, s2
 		bne s5, s4, fillInstructionLoop
-		ebreak
 
 
 		lb s5, 0(s1)
@@ -149,7 +148,6 @@ fill_instructionIndicatorsArray:
 
 		mv a0, s2
 		jal ra, getBranchImm
-		ebreak
 		mv s6, a0 #s5 <- immediate of branch instruction
 		
 		add s7, s6, s0
@@ -165,7 +163,6 @@ fill_instructionIndicatorsArray:
 
 
 	fillInstructionEnd:
-	ebreak
 	sb s3, 0(s1) #store -1 at the end of instructionIndicator Array
 	
 	lw ra, 0(sp)
@@ -177,7 +174,6 @@ fill_instructionIndicatorsArray:
 	lw s5, 24(sp)
 	lw s6, 28(sp)
 	lw s7, 32(sp)
-	ebreak
 	addi sp, sp, 36
 	ret
 # -----------------------------------------------------------------------------
@@ -223,7 +219,7 @@ fill_numPriorInsertionsArray:
 	li s4, -1 #s4 <- end condition
 
 	fillNumPriorLoop:
-		lw s5, 0(s0) #s4 <- instructionindicator[i]
+		lb s5, 0(s0) #s4 <- instructionindicator[i]
 		beq s4, s5, fillNumPriorEnd
 
 		add s2, s2, s3 ##s2 <- s2 + 0 or s2 + 4, accounts for fallthrough resolve
@@ -290,7 +286,7 @@ ret
 #
 # -----------------------------------------------------------------------------		
 fill_modifiedInstructionsArray:
-	addi sp, sp, -36
+	addi sp, sp, -40
 	sw ra, 0(sp)
 	sw s0, 4(sp)
 	sw s1, 8(sp)
@@ -300,7 +296,8 @@ fill_modifiedInstructionsArray:
 	sw s5, 24(sp)
 	sw s6, 28(sp)
 	sw s7, 32(sp)
-
+	sw s8, 36(sp)
+	
 	mv s0, a0 #pointer to original
 	mv s1, a1 #pointer to modified
 	mv s2, a2 #pointer to indicator
@@ -308,13 +305,14 @@ fill_modifiedInstructionsArray:
 
 	mv s9, s3 #pointer to numprior
 
-	li s4, -1 
 	li s8, 0 #branch ID
 
 	fillModifiedLoop:
+		ebreak
 		lb s5, 0(s2) #s4 <- indicator[i]
+		li s4, -1
 		beq s4, s5, fillModifiedEnd
-
+		
 		lw s6, 0(s0) #originalinstruction[i]
 		
 		li s7, 1
@@ -322,69 +320,82 @@ fill_modifiedInstructionsArray:
 		li s7, 2
 		beq s5, s7, insertTarget
 		li s7, 3
-		beq s5, s7, insertBranchAndTarget
+		beq s5, s7, insertBranch
 		j insertNone
 		
 		insertBranch:
-			mv a0, s1 #a0 <- Pointer to the location in modifiedInstructionsArray to store the sequence of setup instructions
-			mv a1, s8 #a1 <- Branch id
-			jal ra, insertSetupInstructions
-			addi s1, s1, 28 #increment modified pointer by 28 (7 instructions)
+		mv a0, s1 #a0 <- Pointer to the location in modifiedInstructionsArray to store the sequence of setup instructions
+		mv a1, s8 #a1 <- Branch id
+		jal ra, insertSetupInstructions
+		ebreak
+		addi s1, s1, 28 #increment modified pointer by 28 (7 instructions)
 
-			#get new immediate
-			mv a0, s6 #a0 <- branch instruction
-			jal ra, getBranchImm
-			add s8, s9, a0 #s8 <- &numprior[target] = numprior[branch] + immediate
-			lw s8, 0(s8) #s8 <- numprior[target]
-			lw s7, 0(s9) #s7 <- numprior[branch]
-			sub s8, s7, s8 #s8 <- numprior[target] - numprior[branch]
-			slli s8, s8, 2 #s8 <- (numprior[target] - numprior[branch])*4
+		#get immediate
+		mv a0, s6 #a0 <- branch instruction
+		jal ra, getBranchImm
+		ebreak
+		
+		#calculate inserted instructions
+		add s8, s9, a0 #s8 <- &numprior[target] = numprior[branch] + immediate
+		lw s8, 0(s8) 
+		lw s7, 0(s9)
+		sub s8, s8, s7 #s8 <- numprior[target] - numprior[branch]
+		addi s8, s8, -4	#s8 <- subtract 4 instructions for resolve(1)
+		
+		#subtract setup instructions if branch
+		srai s4, a0, 2 #s4 <- immediate //4
+		add s4, s4, s2 #s4 <- instructionindicator[i] +/- immediate//4
+		lb s4, 0(s4) #s4 <- instrunctionindicator[target]
+		li s7, 3
+		bne s4, s7, skipSubtractSetup
+		addi s8, s8, -7
+		skipSubtractSetup:
+		
+		slli s8, s8, 2 #s8 <- (total instructions inserted)*4 = added offset
 
-			add a1, a0, s8 #s8 <- immediate + (numprior[target] - numprior[branch])*4
-			mv a0, s6
-			jal ra, setBranchImm
-			
-			#insert branch instruction
-			sw s6, 0(s1)
-			addi s1, s1, 4 #increment modified pointer
-			addi s8, s8, 1 #increment branch ID
+		add a1, a0, s8 #s8 <- new immediate = immediate + added offset
+		mv a0, s6
+		jal ra, setBranchImm
+		ebreak
+		
+		#insert branch instruction
+		sw a0, 0(s1)
+		addi s1, s1, 4 #increment modified pointer
+		addi s8, s8, 1 #increment branch ID
 
-			#insert resolve(-1)
-			mv a0, s1
-			li a1, 0
-			jal ra, insertResolveInstructions
-			addi s1, s1, 16 #increment modified pointer by 16 (4 instructions)
-
-			j insertDone
+		#insert resolve(-1)
+		mv a0, s1
+		li a1, 0
+		jal ra, insertResolveInstructions
+		addi s1, s1, 16 #increment modified pointer by 16 (4 instructions)
+		
+		#Fall through to insertTarget if instruction is target and branch. Skip if just target
+		li s7, 1
+		beq s5, s7, insertDone
 
 		insertTarget:
-			#insert resolve(1)
-			mv a0, s1
-			li a1, 1
-			jal ra, insertResolveInstructions
-			addi s1, s1, 16 #increment modified pointer by 16 (4 instructions)
-
-			#insert target instruction
-			sw s6, 0(s1) 
-			addi s1, s1, 4
+		#insert resolve(1)
+		mv a0, s1
+		li a1, 1
+		jal ra, insertResolveInstructions
+		addi s1, s1, 16 #increment modified pointer by 16 (4 instructions)
+		
+		#insert target instruction
+		sw s6, 0(s1) 
+		addi s1, s1, 4
 			
-			j insertDone
-
-		insertBranchAndTarget:
-			#insert resolve(1)
-			#insert setup
-			#change branch instruction offset
-			#insert instruction
-			#insert resolve(-1)
-			addi s8, s8, 1
-			j insertDone
+		j insertDone
 
 		insertNone:
-			#insert instruction
+		#insert instruction
+		sw s6, 0(s1) 
+		addi s1, s1, 4
+			
 		
 		insertDone:
 		addi s0, s0, 4 #increments originalinstruction array
 		addi s2, s2, 1 #increments instruction indicator byte array
+		addi s9, s9, 4 #increments num prior array
 		j fillModifiedLoop
 	
 
@@ -400,7 +411,8 @@ fill_modifiedInstructionsArray:
 	lw s5, 24(sp)
 	lw s6, 28(sp)
 	lw s7, 32(sp)
-	addi sp, sp, 36
+	lw s8, 36(sp)
+	addi sp, sp, 40
 	ret
 # -----------------------------------------------------------------------------
 # makePrediction:
