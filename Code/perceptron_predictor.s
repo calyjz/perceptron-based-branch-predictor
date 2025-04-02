@@ -303,8 +303,6 @@ fill_modifiedInstructionsArray:
 	mv s2, a2 #pointer to indicator
 	mv s3, a3 #pointer to start of numprior
 
-	mv s9, s3 #pointer to numprior
-
 	li s8, 0 #branch ID
 
 	fillModifiedLoop:
@@ -321,6 +319,12 @@ fill_modifiedInstructionsArray:
 		beq s5, s7, insertTarget
 		li s7, 3
 		beq s5, s7, insertBranch
+
+		#check if instruction is a jal
+		andi s4, s6, 0x7F #s4 <- opcode of instruction
+		li s7, 0x6f
+		beq s4, s7, insertJAL
+
 		j insertNone
 		
 		insertBranch:
@@ -336,9 +340,9 @@ fill_modifiedInstructionsArray:
 		ebreak
 		
 		#calculate inserted instructions
-		add s8, s9, a0 #s8 <- &numprior[target] = numprior[branch] + immediate
+		add s8, s3, a0 #s8 <- &numprior[target] = numprior[branch] + immediate
 		lw s8, 0(s8) 
-		lw s7, 0(s9)
+		lw s7, 0(s3)
 		sub s8, s8, s7 #s8 <- numprior[target] - numprior[branch]
 		addi s8, s8, -4	#s8 <- subtract 4 instructions for resolve(1)
 		
@@ -386,6 +390,30 @@ fill_modifiedInstructionsArray:
 			
 		j insertDone
 
+		insertJAL:
+		#get immediate
+		mv a0, s6 #a0 <- branch instruction
+		jal ra, getJalImm
+		ebreak
+		
+		#calculate inserted instructions
+		add s8, s3, a0 #s8 <- &numprior[target] = numprior[branch] + immediate
+		lw s8, 0(s8) 
+		lw s7, 0(s3)
+		sub s8, s8, s7 #s8 <- numprior[target] - numprior[branch]
+		
+		slli s8, s8, 2 #s8 <- (total instructions inserted)*4 = added offset
+
+		add a1, a0, s8 #s8 <- new immediate = immediate + added offset
+		mv a0, s6
+		jal ra, setJalImm
+		
+		#insert jal instruction
+		sw a0, 0(s1)
+		addi s1, s1, 4 #increment modified pointer
+
+		j insertDone
+
 		insertNone:
 		#insert instruction
 		sw s6, 0(s1) 
@@ -395,7 +423,7 @@ fill_modifiedInstructionsArray:
 		insertDone:
 		addi s0, s0, 4 #increments originalinstruction array
 		addi s2, s2, 1 #increments instruction indicator byte array
-		addi s9, s9, 4 #increments num prior array
+		addi s3, s3, 4 #increments num prior array
 		j fillModifiedLoop
 	
 
@@ -636,8 +664,26 @@ insertResolveInstructions:
 #
 # -----------------------------------------------------------------------------
 getJalImm:
+	li t6, 0
 
-ret
+	andi t0, a0, 0xF0000000 #20
+	srli t0, t0, 11
+	and t6, t6, t0 
+
+	andi t1, a0, 0x8FE00000 #10:1
+	srli t1, t1, 20
+	and t6, t6, t1
+
+	andi t2, a0, 0x00100000 #11
+	srli t2, t2, 9
+	and t6, t6, t2
+
+	andi t3, a0, 0x000FF000 #19:12
+	and t6, t6, t3
+
+	mv a0, t6
+
+	ret
 # ----------------------------------------------------------------------------
 # setJalImm (helper):
 #
@@ -655,6 +701,21 @@ ret
 #
 # -----------------------------------------------------------------------------
 setJalImm:
+	and a0, a0, 0xFFF #set immediate to 0
+	andi t0, a1, 0x7FE #10:1
+	slli t0, t0, 20
+	and a0, a0, t0
+
+	andi t1, a1, 0x800 #11
+	slli t1, t1, 9
+	and a0, a0, t1
+
+	andi t2, a1, 0xFF000 #19:12
+	and a0, a0, t2
+
+	andi t3, a1, 0x00100000 #20
+	slli t3, t3, 11
+	and a0, a0, t2
 
 ret	
 # ----------------------------------------------------------------------------
