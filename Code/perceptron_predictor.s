@@ -158,6 +158,14 @@ fill_instructionIndicatorsArray:
 		lb s5, 0(s6)
 		addi s5, s5, 2
 		sb s5, 0(s6)
+
+		#increment numBranches
+		la s6, numBranches
+		lw s5, numBranches
+		addi s5, s5, 1
+		ebreak
+		sw s5, 0(s6)
+
 		
 		j fillInstructionLoop
 
@@ -436,7 +444,6 @@ fill_modifiedInstructionsArray:
 		j fillModifiedLoop
 	
 
-#for a target, the offset would be branch immediate//4 + numPriorInsertions[target] - numPriorInstructions[branch]
 
 	fillModifiedEnd:
 	li s4, -1
@@ -471,6 +478,7 @@ fill_modifiedInstructionsArray:
 #	
 # -----------------------------------------------------------------------------			
 makePrediction:
+	#set activebranch to branchID
 
 ret
 # -----------------------------------------------------------------------------
@@ -490,6 +498,12 @@ ret
 # -----------------------------------------------------------------------------		
 trainPredictor:
 
+	#shift globalshift predictor by 1
+	#insert most recently executed branch outcome (1 if taken, 0 if not taken)
+
+	#iff executed, add one to numBranchesExecuted
+	#iff prediction is correct, add one to numCorrectPredictions
+	#set active branch to -1
 ret
 # -----------------------------------------------------------------------------
 # insertSetupInstructions (helper):
