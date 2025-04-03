@@ -1,0 +1,97 @@
+This is your modifiedInstructionsArray:
+0xfec10113 inst
+0x00812023 
+0x00912223
+0x01212423
+0x01312623
+0x00112823
+0x01900413
+0x00000493
+0x00000913
+0x00000513 setup start
+0x100105b7
+0x00058593
+0x00a5a023
+0x004012b7
+0xd6828293 #THIS IS WRONG
+0x000280e7 setup end
+0x0e805463 NEW BRANCH
+0xfff00513 fallthrough start
+0x004012b7 
+0xdc028293 #THIS IS WRONG
+0x000280e7 fallthrough end
+0x00100513 target start
+0x004012b7
+0xdc028293 #THIS IS WRONG
+0x000280e7 target end
+0x0014f993 inst
+0x00100513 setup start (OUTPUT: 0x0c500513)
+0x100105b7
+0x00058593
+0x00a5a023 
+0x004012b7
+0xd6828293
+0x000280e7 setup end
+0x00999e63 NEW BRANCH
+0xfff00513 fallthrough start
+0x004012b7
+0xdc028293 #THIS IS WRONG
+0x000280e7 fallthrough end
+0x00990933 inst
+0x0580006f NEW JAL
+0x00100513 target start
+0x004012b7
+0xdc028293
+0x000280e7 target end
+0x00200513 setup start (OUTPUT: 0x04c00513)
+0x100105b7
+0x00058593 
+0x00a5a023 
+0x004012b7
+0xd6828293
+0x000280e7 setup end
+0x01240c63 NEW BRANCH
+0xfff00513 fallthrough start
+0x004012b7
+0xdc028293
+0x000280e7 fallthrough end
+0x00190913 addi s2, s2, 1
+0x00100513 target start
+0x004012b7
+0xdc028293
+0x000280e7 target end
+0x00148493 addi s1, s1, 1
+0x00300513 setup start (OUTPUT: 0x01100513)
+0x100105b7
+0x00058593
+0x00a5a023
+0x004012b7
+0xd6828293
+0x000280e7 setup end
+0xf484c0e3 NEW BRANCH
+0xfff00513 fallthrough start
+0x004012b7
+0xdc028293
+0x000280e7 fallthrough end
+0x00100513 target start
+0x004012b7
+0xdc028293
+0x000280e7 target end
+0x00012403 lw s0, 0(sp)
+0x00412483
+0x00812903
+0x00c12983
+0x01012083
+0x01410113
+0x00008067
+These are your final perceptron weights:
+Branch id 0: [ -1 1 1 1 1 1 1 1 1 ]
+
+Branch id 1: [ 14 16 18 16 16 14 14 12 12 ]
+
+Branch id 2: [ -17 -17 -17 -17 -15 -15 -13 -13 -11 ]
+
+Branch id 3: [ 19 17 15 15 13 13 11 11 9 ]
+Total branch instructions executed: 74
+Total correct predictions: 67
+Branch predictor accuracy: 90.54054%

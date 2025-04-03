@@ -117,7 +117,7 @@ fill_instructionIndicatorsArray:
 
 	sb zero, 0(s4) #store zero in instructionindicator array
 	addi s2, s2, 4
-	addi s1, s1, 4
+	addi s4, s4, 1
 	j fillInstructionZeroLoop
 	fillInstructionZeroLoopEnd:
 	
@@ -253,7 +253,7 @@ fill_numPriorInsertionsArray:
 		j fillNumPriorLoop
 	
 	fillNumPriorEnd:
-	
+	sw s4, 0(s1)
 	lw ra, 0(sp)
 	lw s0, 4(sp)
 	lw s1, 8(sp)
@@ -286,7 +286,7 @@ ret
 #
 # -----------------------------------------------------------------------------		
 fill_modifiedInstructionsArray:
-	addi sp, sp, -40
+	addi sp, sp, -44
 	sw ra, 0(sp)
 	sw s0, 4(sp)
 	sw s1, 8(sp)
@@ -297,17 +297,17 @@ fill_modifiedInstructionsArray:
 	sw s6, 28(sp)
 	sw s7, 32(sp)
 	sw s8, 36(sp)
+	sw s9, 40(sp)
 	
 	mv s0, a0 #pointer to original
 	mv s1, a1 #pointer to modified
 	mv s2, a2 #pointer to indicator
 	mv s3, a3 #pointer to start of numprior
 
-	li s8, 0 #branch ID
+	li s9, 0 #branch ID
 
 	fillModifiedLoop:
-		ebreak
-		lb s5, 0(s2) #s4 <- indicator[i]
+		lb s5, 0(s2) #s5 <- indicator[i]
 		li s4, -1
 		beq s4, s5, fillModifiedEnd
 		
@@ -318,7 +318,7 @@ fill_modifiedInstructionsArray:
 		li s7, 2
 		beq s5, s7, insertTarget
 		li s7, 3
-		beq s5, s7, insertBranch
+		beq s5, s7, insertTarget
 
 		#check if instruction is a jal
 		andi s4, s6, 0x7F #s4 <- opcode of instruction
@@ -329,15 +329,13 @@ fill_modifiedInstructionsArray:
 		
 		insertBranch:
 		mv a0, s1 #a0 <- Pointer to the location in modifiedInstructionsArray to store the sequence of setup instructions
-		mv a1, s8 #a1 <- Branch id
+		mv a1, s9 #a1 <- Branch id
 		jal ra, insertSetupInstructions
-		ebreak
 		addi s1, s1, 28 #increment modified pointer by 28 (7 instructions)
 
 		#get immediate
 		mv a0, s6 #a0 <- branch instruction
 		jal ra, getBranchImm
-		ebreak
 		
 		#calculate inserted instructions
 		add s8, s3, a0 #s8 <- &numprior[target] = numprior[branch] + immediate
@@ -360,12 +358,11 @@ fill_modifiedInstructionsArray:
 		add a1, a0, s8 #s8 <- new immediate = immediate + added offset
 		mv a0, s6
 		jal ra, setBranchImm
-		ebreak
 		
 		#insert branch instruction
 		sw a0, 0(s1)
 		addi s1, s1, 4 #increment modified pointer
-		addi s8, s8, 1 #increment branch ID
+		addi s9, s9, 1 #increment branch ID
 
 		#insert resolve(-1)
 		mv a0, s1
@@ -373,9 +370,7 @@ fill_modifiedInstructionsArray:
 		jal ra, insertResolveInstructions
 		addi s1, s1, 16 #increment modified pointer by 16 (4 instructions)
 		
-		#Fall through to insertTarget if instruction is target and branch. Skip if just target
-		li s7, 1
-		beq s5, s7, insertDone
+		j insertDone
 
 		insertTarget:
 		#insert resolve(1)
@@ -383,6 +378,9 @@ fill_modifiedInstructionsArray:
 		li a1, 1
 		jal ra, insertResolveInstructions
 		addi s1, s1, 16 #increment modified pointer by 16 (4 instructions)
+		
+		li s7, 3
+		beq s5, s7, insertBranch
 		
 		#insert target instruction
 		sw s6, 0(s1) 
@@ -394,18 +392,29 @@ fill_modifiedInstructionsArray:
 		#get immediate
 		mv a0, s6 #a0 <- branch instruction
 		jal ra, getJalImm
-		ebreak
 		
 		#calculate inserted instructions
 		add s8, s3, a0 #s8 <- &numprior[target] = numprior[branch] + immediate
 		lw s8, 0(s8) 
 		lw s7, 0(s3)
 		sub s8, s8, s7 #s8 <- numprior[target] - numprior[branch]
+		#addi s8, s8, -4	#s8 <- subtract 4 instructions for resolve(1)
+		
+		#subtract setup instructions if branch
+		#srai s4, a0, 2 #s4 <- immediate //4
+		#add s4, s4, s2 #s4 <- instructionindicator[i] +/- immediate//4
+		#lb s4, 0(s4) #s4 <- instrunctionindicator[target]
+		#li s7, 3
+		#bne s4, s7, skipSubtractSetup2
+		#addi s8, s8, -7
+		skipSubtractSetup2:
+		
 		
 		slli s8, s8, 2 #s8 <- (total instructions inserted)*4 = added offset
 
 		add a1, a0, s8 #s8 <- new immediate = immediate + added offset
 		mv a0, s6
+		
 		jal ra, setJalImm
 		
 		#insert jal instruction
@@ -430,6 +439,9 @@ fill_modifiedInstructionsArray:
 #for a target, the offset would be branch immediate//4 + numPriorInsertions[target] - numPriorInstructions[branch]
 
 	fillModifiedEnd:
+	li s4, -1
+	sw s4, 0(s1)
+	
 	lw ra, 0(sp)
 	lw s0, 4(sp)
 	lw s1, 8(sp)
@@ -665,21 +677,25 @@ insertResolveInstructions:
 # -----------------------------------------------------------------------------
 getJalImm:
 	li t6, 0
-
-	andi t0, a0, 0xF0000000 #20
+	
+	li t5, 0xF0000000
+	and t0, a0, t5 #20
 	srli t0, t0, 11
-	and t6, t6, t0 
-
-	andi t1, a0, 0x8FE00000 #10:1
+	or t6, t6, t0 
+	
+	li t5, 0x8FE00000
+	and t1, a0, t5 #10:1
 	srli t1, t1, 20
-	and t6, t6, t1
-
-	andi t2, a0, 0x00100000 #11
+	or t6, t6, t1
+	
+	li t5, 0x00100000
+	and t2, a0, t5 #11
 	srli t2, t2, 9
-	and t6, t6, t2
-
-	andi t3, a0, 0x000FF000 #19:12
-	and t6, t6, t3
+	or t6, t6, t2
+	
+	li t5, 0x000FF000
+	and t3, a0, t5 #19:12
+	or t6, t6, t3
 
 	mv a0, t6
 
@@ -701,21 +717,27 @@ getJalImm:
 #
 # -----------------------------------------------------------------------------
 setJalImm:
-	and a0, a0, 0xFFF #set immediate to 0
-	andi t0, a1, 0x7FE #10:1
+	li t5, 0xFFF
+	and a0, a0, t5 #set immediate to 0
+	
+	li t5, 0x7FE
+	and t0, a1, t5 #10:1
 	slli t0, t0, 20
-	and a0, a0, t0
-
-	andi t1, a1, 0x800 #11
+	or a0, a0, t0
+	
+	li t5, 0x800
+	and t1, a1, t5 #11
 	slli t1, t1, 9
-	and a0, a0, t1
-
-	andi t2, a1, 0xFF000 #19:12
-	and a0, a0, t2
-
-	andi t3, a1, 0x00100000 #20
+	or a0, a0, t1
+	
+	li t5, 0xFF000
+	and t2, a1, t5 #19:12
+	or a0, a0, t2
+	
+	li t5, 0x00100000
+	and t3, a1, t5 #20
 	slli t3, t3, 11
-	and a0, a0, t2
+	or a0, a0, t2
 
 ret	
 # ----------------------------------------------------------------------------
