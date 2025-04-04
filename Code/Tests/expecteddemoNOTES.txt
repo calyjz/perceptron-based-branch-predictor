@@ -13,19 +13,19 @@ This is your modifiedInstructionsArray:
 0x00058593
 0x00a5a023
 0x004012b7
-0xd6828293 #THIS IS WRONG
+0xd6828293 
 0x000280e7 setup end
 0x0e805463 NEW BRANCH
 0xfff00513 fallthrough start
 0x004012b7 
-0xdc028293 #THIS IS WRONG
+0xdc028293 
 0x000280e7 fallthrough end
 0x00100513 target start
 0x004012b7
-0xdc028293 #THIS IS WRONG
+0xdc028293 
 0x000280e7 target end
 0x0014f993 inst
-0x00100513 setup start (OUTPUT: 0x0c500513)
+0x00100513 setup start
 0x100105b7
 0x00058593
 0x00a5a023 
@@ -43,7 +43,7 @@ This is your modifiedInstructionsArray:
 0x004012b7
 0xdc028293
 0x000280e7 target end
-0x00200513 setup start (OUTPUT: 0x04c00513)
+0x00200513 setup start
 0x100105b7
 0x00058593 
 0x00a5a023 
@@ -61,7 +61,7 @@ This is your modifiedInstructionsArray:
 0xdc028293
 0x000280e7 target end
 0x00148493 addi s1, s1, 1
-0x00300513 setup start (OUTPUT: 0x01100513)
+0x00300513 setup start
 0x100105b7
 0x00058593
 0x00a5a023

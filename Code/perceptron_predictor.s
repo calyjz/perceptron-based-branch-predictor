@@ -167,7 +167,6 @@ fill_instructionIndicatorsArray:
 		la s6, numBranches
 		lw s5, numBranches
 		addi s5, s5, 1
-		ebreak
 		sw s5, 0(s6)
 
 		
@@ -491,11 +490,11 @@ fill_modifiedInstructionsArray:
 #
 # Register Usage:
 #	s0: branch ID
-#	s1:
+#	s1: globalhistory
 #	s2: patternhistorytable[branchID]
 #	s3: sum
 #	s4: loop counter
-#	s5: globalhistory[i]
+#	s5: globalhistory
 #	s6: patternhistorytable[branchID][i+1]
 # -----------------------------------------------------------------------------			
 makePrediction:
@@ -510,38 +509,49 @@ makePrediction:
 	sw s6, 28(sp)
 
 	mv s0, a0
-
 	#set activebranch to branchID
-	la s1, activebranch
+	la s1, activeBranch
 	sw s0, 0(s1)
 
-	li s1, 9
-	mul s1, s0, s1 #s1 <- branchID * 4
+	slli s1, s0, 2 #s1 <- branchID * 4
 	la s2, patternHistoryTable
-	addi s1, s1, s2
+	add s1, s1, s2
 	lw s2, 0(s1) #s2 <- patternhistorytable[branchID]
 
 	lb s3, 0(s2) #sum += bias input
 	addi s2, s2, 1 
 
 	la s1, globalHistoryRegister
+	lb s1, 0(s1) #s5 <- globalhistory[i]
+	slli s1, s1, 24
 	li s4, 8
 	calculatePrediction:
-		lb s5, 0(s1) #s5 <- globalhistory[i]
-		lb s6, 0(s2) #s6 <- patternhistorytable[branchID][i+1]
-		beqz s5, calculateNotTaken
+		beqz s4, makePredictionEnd
+		lb s6, 0(s2) #s6 <- patternhistorytable[branchID][i]
+		
+		#check greatest bit. If 1, then s1 is less than zero. If 0, then s1 is greater or equal than zero
+		bltz s1, calculateTaken
+		
+		calculateNotTaken:
+		sub s3, s3, s6 #add to sum
+		addi s2, s2, 1 #next weight
+		slli s1, s1, 1 #shift globalhistory bits to the left
+		addi s4, s4, -1 #decrement counter
+		j calculatePrediction
 
 		calculateTaken:
 		add s3, s3, s6
+		addi s2, s2, 1
+		slli s1, s1, 1
 		addi s4, s4, -1
-		beqz s4, makePredictionEnd
+		j calculatePrediction
 
-		calculateNotTaken:
-		sub s3, s3, s6
-		addi s4, s4, -1
-		beqz s4, makePredictionEnd
 
 	makePredictionEnd:
+	ebreak
+	la s0, output
+	sw s3, 0(s0)
+	
 	lw ra, 0(sp)
 	lw s0, 4(sp)
 	lw s1, 8(sp)
