@@ -73,6 +73,8 @@ numCorrectPredictions:			.word 0
 # -----------------------------------------------------------------------------	
 perceptronPredictor:
 	#set instruction indicatiors, numpriors, and modified instructions array to 0
+
+	#allocate memory for pattern history here
 ret
 # -----------------------------------------------------------------------------
 # fill_instructionIndicatorsArray:
@@ -90,7 +92,9 @@ ret
 # 	s0: Pointer to originalInstructionsArray
 #	s1: Pointer to instructionIndicatorsArray
 #	s2: index i
-#	
+#	s3: sentinel value (-1)
+#	s4: opcode for branch
+#	s5-s7: intermediate calculations
 # -----------------------------------------------------------------------------		
 fill_instructionIndicatorsArray:
 	addi sp, sp, -36
@@ -204,7 +208,7 @@ fill_instructionIndicatorsArray:
 #	s3: branch previous 
 #	s4: -1
 #	s5: instructionindicator[i]
-#	s6: Intermediate values
+#	s6-s7: Intermediate values
 #
 # -----------------------------------------------------------------------------		
 fill_numPriorInsertionsArray:
@@ -291,7 +295,18 @@ ret
 # 	None
 #
 # Register Usage:
+#	s0: Pointer to originalInstructionsArray
+#	s1: Pointer to modifiedInstructionsArray
+#	s2: Pointer to instructionIndicatorsArray
+# 	s3: Pointer to numPriorInsertionsArray 
+#	s4: intermediate calculations
+#	s5: indicator[i]
+#	s6: originalinstruction[i]
+#	s7: intermediate calculations
+#	s8: intermediate calculations
+#	s9: Branch ID
 #
+#	
 # -----------------------------------------------------------------------------		
 fill_modifiedInstructionsArray:
 	addi sp, sp, -44
@@ -475,10 +490,67 @@ fill_modifiedInstructionsArray:
 # 	None
 #
 # Register Usage:
-#	
+#	s0: branch ID
+#	s1:
+#	s2: patternhistorytable[branchID]
+#	s3: sum
+#	s4: loop counter
+#	s5: globalhistory[i]
+#	s6: patternhistorytable[branchID][i+1]
 # -----------------------------------------------------------------------------			
 makePrediction:
+	addi sp, sp, -32
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	sw s6, 28(sp)
+
+	mv s0, a0
+
 	#set activebranch to branchID
+	la s1, activebranch
+	sw s0, 0(s1)
+
+	li s1, 9
+	mul s1, s0, s1 #s1 <- branchID * 4
+	la s2, patternHistoryTable
+	addi s1, s1, s2
+	lw s2, 0(s1) #s2 <- patternhistorytable[branchID]
+
+	lb s3, 0(s2) #sum += bias input
+	addi s2, s2, 1 
+
+	la s1, globalHistoryRegister
+	li s4, 8
+	calculatePrediction:
+		lb s5, 0(s1) #s5 <- globalhistory[i]
+		lb s6, 0(s2) #s6 <- patternhistorytable[branchID][i+1]
+		beqz s5, calculateNotTaken
+
+		calculateTaken:
+		add s3, s3, s6
+		addi s4, s4, -1
+		beqz s4, makePredictionEnd
+
+		calculateNotTaken:
+		sub s3, s3, s6
+		addi s4, s4, -1
+		beqz s4, makePredictionEnd
+
+	makePredictionEnd:
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	lw s6, 28(sp)
+	addi sp, sp, -32
 
 ret
 # -----------------------------------------------------------------------------
