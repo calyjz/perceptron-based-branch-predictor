@@ -69,12 +69,82 @@ numCorrectPredictions:			.word 0
 # 	None
 #
 # Register Usage:
-#
+#	s0: Pointer to originalInstructionsArray
+#	s1: Pointer to modifiedInstructionsArray
+# 	s2: Pointer to instructionIndicatorsArray
+#	s3: Pointer to numPriorInsertionsArray
+#	s4: i in for loop for allocating memory
+#	s5: pointer to patternHistoryTable
 # -----------------------------------------------------------------------------	
 perceptronPredictor:
-	#set instruction indicatiors, numpriors, and modified instructions array to 0
+	addi sp, sp, -28
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	
+	mv s0, a0 #s0 -> Pointer to originalInstructionsArray
+	mv s1, a1 #s1 -> Pointer to modifiedInstructionsArray
+	mv s2, a2 #s2 -> Pointer to instructionIndicatorsArray
+	mv s3, a3 #s3 -> Pointer to numPriorInsertionsArray
 
-	#allocate memory for pattern history here
+	#call fill_instructionIndicatorsArray
+	mv a0, s0 #a0 -> Pointer to originalInstructionsArray
+	mv a1, s2 #a1 -> Pointer to instructionIndicatorsArray
+	jal ra, fill_instructionIndicatorsArray
+
+	#call fill_numPriorInsertionsArray
+	mv a0, s2 #a0 -> Pointer to instructionIndicatorsArray
+	mv a1, s3 #a1 -> Pointer to numPriorInsertionsArray
+
+	#call fill_modifiedInstructionsArray
+	mv s0, a0 #s0 -> Pointer to originalInstructionsArray
+	mv s1, a1 #s1 -> Pointer to modifiedInstructionsArray
+	mv s2, a2 #s2 -> Pointer to instructionIndicatorsArray
+	mv s3, a3 #s3 -> Pointer to numPriorInsertionsArray
+
+	#dynamically allocate memory for weights in pattern history
+	lw s4, numBranches
+	la s5, patternHistoryTable
+	allocateMemoryLoop:
+		beqz s4, allocateMemoryDone
+		li a0, 9 #allocate 9 bytes
+		li a7, 9
+		ecall
+
+		sw a0, 0(s5)
+
+		addi s5, s5, 4
+		addi s4, s4, -1
+
+	allocateMemoryDone:
+	#add -1 at the end of pattern history table
+	li s4, -1
+	sw s4, 0(s5)
+
+	la t0, modifiedInstructionsArray
+	jalr t0
+
+	mv a0, s1 #a0 <- Pointer to modifiedInstructionsArray
+	lw a1, numBranches
+	addi a1, a1, -1 #a1 <- num of branches - 1 = Max branch Id
+	lw a2, numBranchesExecuted
+	lw a3, numCorrectPredictions
+
+	jal ra, printResults
+
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	addi sp, sp, 28
+	
 ret
 # -----------------------------------------------------------------------------
 # fill_instructionIndicatorsArray:
