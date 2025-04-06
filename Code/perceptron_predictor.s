@@ -604,16 +604,17 @@ trainPredictor:
 	mv s0, a0
 
 	#load output
-	lw s1, OUTPUT
+	lw s1, output
 
 	#load output sign
 	bltz s1, setNegativeSign
-
+	
+	ebreak
 	setPositiveSign:
-	lw s2, 1
+	li s2, 1
 	j isPredictionCorrect
 	setNegativeSign:
-	lw s2, -1
+	li s2, -1
 
 	isPredictionCorrect:
 	#check if sign of OUTPUT == sign of a0.
@@ -642,11 +643,11 @@ trainPredictor:
 	lw s4, 0(s3) #s2 <- patternhistorytable[branchID] = weights
 
 	#calculate and store the weight of the biased input
-	lb s3, 0(s2) #s3 <- weight[0]
+	lb s3, 0(s4) #s3 <- weight[0]
 	add s3, s3, s0 #s3 <- weight[0] + branch outcome * 1
-	sb s3, 0(s2) # new weight -> weight[0]
+	sb s3, 0(s4) # new weight -> weight[0]
 	#next weight
-	addi s2, s2, 1
+	addi s4, s4, 1
 
 	#retrieve globalHistoryRegister
 	lb s5, globalHistoryRegister
@@ -656,7 +657,7 @@ trainPredictor:
 
 	calculateNewWeight:
 		beqz s6, trainPredictorEnd
-		lb s3, 0(s2) #s6 <- weights[i]
+		lb s3, 0(s4) #s6 <- weights[i]
 
 		#check greatest bit. If 1, then s1 is less than zero. If 0, then s1 is greater or equal than zero
 		bltz s5, calculateTakenWeight
@@ -671,9 +672,9 @@ trainPredictor:
 		mul s7, s7, s0 #t * x_i
 
 		add s3, s3, s7 #s3 <- weight[i] + t * x_i
-		sb s3, 0(s2) # new weight -> weight[0]
+		sb s3, 0(s4) # new weight -> weight[0]
 
-		addi s2, s2, 1 #next weight
+		addi s4, s4, 1 #next weight
 		slli s5, s5, 1 #shift globalhistory bits to the left
 		addi s6, s6, -1 #decrement counter
 		j calculateNewWeight
