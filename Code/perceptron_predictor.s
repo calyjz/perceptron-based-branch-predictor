@@ -520,9 +520,9 @@ makePrediction:
 	lb s3, 0(s2) #sum += bias input
 	addi s2, s2, 1 
 
-	la s1, globalHistoryRegister
-	lb s1, 0(s1) #s5 <- globalhistory[i]
+	lb s1, globalHistoryRegister
 	slli s1, s1, 24
+
 	li s4, 8
 	calculatePrediction:
 		beqz s4, makePredictionEnd
@@ -547,9 +547,14 @@ makePrediction:
 
 
 	makePredictionEnd:
-	ebreak
 	la s0, output
 	sw s3, 0(s0)
+
+	#add one to numBranchesExecuted
+	la s0, numBranchesExecuted
+	lw s1, numBranchesExecuted
+	addi s1, s1, 1
+	sw s1, 0(s0)
 	
 	lw ra, 0(sp)
 	lw s0, 4(sp)
@@ -575,16 +580,130 @@ ret
 # 	None
 #
 # Register Usage:
-#
+#	s0: Actual branch outcome (1 if taken, else -1)
+#	s1: Output
+#	s2: sign of output
+#	s3: load weight and store new weight
+#	s4: PatternHistoryTable[ActiveBranchID] = address of weight array
+#	s5: globalHistoryRegister
+#	s6: counter for for loop
+#	s7: x_i and x_i * t
 # -----------------------------------------------------------------------------		
 trainPredictor:
+	addi sp, sp, -36
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	sw s6, 28(sp)
+	sw s7, 32(sp)
+	
+	mv s0, a0
 
+	#load output
+	lw s1, OUTPUT
+
+	#load output sign
+	bltz s1, setNegativeSign
+
+	setPositiveSign:
+	lw s2, 1
+	j isPredictionCorrect
+	setNegativeSign:
+	lw s2, -1
+
+	isPredictionCorrect:
+	#check if sign of OUTPUT == sign of a0.
+	bne s2, s0, updateWeights
+
+	#add one to numCorrectPredictions
+	la s3, numCorrectPredictions
+	lw s4, numCorrectPredictions
+	addi s4, s4, 1
+	sw s4, 0(s3)
+	
+
+	updateWeights:
+	#load threshold
+	lw s3, threshold
+
+	#check if OUTPUT > Threshold
+	bgt s1, s3, trainPredictorEnd 
+	
+	#retrieve weights
+	lw s3, activeBranch
+
+	slli s3, s3, 2 #s3 <- branchID * 4
+	la s4, patternHistoryTable
+	add s3, s3, s4 #s3 <- &patternhistorytable[branchID]
+	lw s4, 0(s3) #s2 <- patternhistorytable[branchID] = weights
+
+	#calculate and store the weight of the biased input
+	lb s3, 0(s2) #s3 <- weight[0]
+	add s3, s3, s0 #s3 <- weight[0] + branch outcome * 1
+	sb s3, 0(s2) # new weight -> weight[0]
+	#next weight
+	addi s2, s2, 1
+
+	#retrieve globalHistoryRegister
+	lb s5, globalHistoryRegister
+	slli s5, s5, 24
+
+	li s6, 8
+
+	calculateNewWeight:
+		beqz s6, trainPredictorEnd
+		lb s3, 0(s2) #s6 <- weights[i]
+
+		#check greatest bit. If 1, then s1 is less than zero. If 0, then s1 is greater or equal than zero
+		bltz s5, calculateTakenWeight
+
+		calculateNotTakenWeight:
+		li s7, -1 #x_i
+		j calculateWeight
+		calculateTakenWeight:
+		li s7, 1 #x_i
+
+		calculateWeight:
+		mul s7, s7, s0 #t * x_i
+
+		add s3, s3, s7 #s3 <- weight[i] + t * x_i
+		sb s3, 0(s2) # new weight -> weight[0]
+
+		addi s2, s2, 1 #next weight
+		slli s5, s5, 1 #shift globalhistory bits to the left
+		addi s6, s6, -1 #decrement counter
+		j calculateNewWeight
+
+	trainPredictorEnd:
 	#shift globalshift predictor by 1
-	#insert most recently executed branch outcome (1 if taken, 0 if not taken)
+	lb s5, globalHistoryRegister
+	srli s5, s5, 1
+	sgtz s1, s0 #s1 <- 1 if s0 == 1, 0 if s0 == -1
+	slli s1, s1, 7 #shift 0th bit to 7th bit
+	or s1, s1, s5
+	la s5, globalHistoryRegister
+	sw s1, 0(s5)
 
-	#iff executed, add one to numBranchesExecuted
-	#iff prediction is correct, add one to numCorrectPredictions
 	#set active branch to -1
+	li s1, -1
+	la s2, activeBranch
+	sw s1, 0(s2)
+
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	lw s6, 28(sp)
+	lw s7, 32(sp)
+	addi sp, sp, -36
+
 ret
 # -----------------------------------------------------------------------------
 # insertSetupInstructions (helper):
