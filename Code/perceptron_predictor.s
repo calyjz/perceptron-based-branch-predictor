@@ -420,15 +420,14 @@ fill_modifiedInstructionsArray:
 		lw s8, 0(s8) 
 		lw s7, 0(s3)
 		sub s8, s8, s7 #s8 <- numprior[target] - numprior[branch]
-		#addi s8, s8, -4	#s8 <- subtract 4 instructions for resolve(1)
 		
 		#subtract setup instructions if branch
-		#srai s4, a0, 2 #s4 <- immediate //4
-		#add s4, s4, s2 #s4 <- instructionindicator[i] +/- immediate//4
-		#lb s4, 0(s4) #s4 <- instrunctionindicator[target]
-		#li s7, 3
-		#bne s4, s7, skipSubtractSetup2
-		#addi s8, s8, -7
+		srai s4, a0, 2 #s4 <- immediate //4
+		add s4, s4, s2 #s4 <- instructionindicator[i] +/- immediate//4
+		lb s4, 0(s4) #s4 <- instrunctionindicator[target]
+		li s7, 3
+		bne s4, s7, skipSubtractSetup2
+		addi s8, s8, -7
 		skipSubtractSetup2:
 		
 		
