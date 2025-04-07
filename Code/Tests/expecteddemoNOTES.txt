@@ -95,3 +95,38 @@ Branch id 3: [ 19 17 15 15 13 13 11 11 9 ]
 Total branch instructions executed: 74
 Total correct predictions: 67
 Branch predictor accuracy: 90.54054%
+
+TODO: set line 774 to LBU
+
+[0 0 0 0 0 0 0 0]
+b0
+[0 0 0 0 0 0 0 0]
+b1
+[0 0 0 0 0 0 0 0]
+b3
+[1 0 0 0 0 0 0 0]
+b1
+[0 1 0 0 0 0 0 0]
+b3
+[1 0 1 0 0 0 0 0]
+b1
+
+b0
+pred:  0. actual:  0. weights = [-1  1  1  1  1  1  1  1  1]
+
+b1
+pred:  0. actual: -1. weights = [-1  1  1  1  1  1  1  1  1]
+pred: -7. actual: -1. weights = [-2  0  2  2  2  2  2  2  2]
+pred: -12. actual: 1. weights = [-2  0  2  2  2  2  2  2  2]
+
+
+b2
+
+b3
+pred:  0. actual:  1. weights = [ 1 -1 -1 -1 -1 -1 -1 -1 -1]
+pred:  7. actual:  1. weights = [ 2 -2  0 -2 -2 -2 -2 -2 -2]
+
+
+
+
+

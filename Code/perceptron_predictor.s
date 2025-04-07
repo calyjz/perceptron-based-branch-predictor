@@ -50,6 +50,11 @@ numBranchesExecuted:			.word 0
 .align 2	
 numCorrectPredictions:			.word 0
 
+branch_prefix:    .asciz "[branch ID: "
+ghr_prefix:       .asciz "-- ghr: "
+weights_prefix:   .asciz " -- weight: "
+ActualOutcomeText: .asciz "] -- outcome: "
+
 .include "common.s"
 
 .text
@@ -99,16 +104,19 @@ perceptronPredictor:
 	#call fill_numPriorInsertionsArray
 	mv a0, s2 #a0 -> Pointer to instructionIndicatorsArray
 	mv a1, s3 #a1 -> Pointer to numPriorInsertionsArray
+	jal ra, fill_numPriorInsertionsArray
 
 	#call fill_modifiedInstructionsArray
-	mv s0, a0 #s0 -> Pointer to originalInstructionsArray
-	mv s1, a1 #s1 -> Pointer to modifiedInstructionsArray
-	mv s2, a2 #s2 -> Pointer to instructionIndicatorsArray
-	mv s3, a3 #s3 -> Pointer to numPriorInsertionsArray
-
+	mv a0, s0 #s0 -> Pointer to originalInstructionsArray
+	mv a1, s1 #s1 -> Pointer to modifiedInstructionsArray
+	mv a2, s2 #s2 -> Pointer to instructionIndicatorsArray
+	mv a3, s3 #s3 -> Pointer to numPriorInsertionsArray
+	jal ra, fill_modifiedInstructionsArray
+	
 	#dynamically allocate memory for weights in pattern history
 	lw s4, numBranches
 	la s5, patternHistoryTable
+	
 	allocateMemoryLoop:
 		beqz s4, allocateMemoryDone
 		li a0, 9 #allocate 9 bytes
@@ -119,14 +127,18 @@ perceptronPredictor:
 
 		addi s5, s5, 4
 		addi s4, s4, -1
+		j allocateMemoryLoop
 
 	allocateMemoryDone:
 	#add -1 at the end of pattern history table
 	li s4, -1
 	sw s4, 0(s5)
-
+	
+	ebreak
 	la t0, modifiedInstructionsArray
-	jalr t0
+	lw t1, 0(t0)
+	sw t1, 0(t0)
+	jalr ra, t0, 0
 
 	mv a0, s1 #a0 <- Pointer to modifiedInstructionsArray
 	lw a1, numBranches
@@ -195,6 +207,10 @@ fill_instructionIndicatorsArray:
 	j fillInstructionZeroLoop
 	fillInstructionZeroLoopEnd:
 	
+	#reset numBranches
+	la s2, numBranches
+	sw zero, 0(s2)
+	
 
 	li s4, 99 #s4 <- opcode for branch
 
@@ -239,7 +255,6 @@ fill_instructionIndicatorsArray:
 		addi s5, s5, 1
 		sw s5, 0(s6)
 
-		
 		j fillInstructionLoop
 
 
@@ -335,6 +350,7 @@ fill_numPriorInsertionsArray:
 	
 	fillNumPriorEnd:
 	sw s4, 0(s1)
+	
 	lw ra, 0(sp)
 	lw s0, 4(sp)
 	lw s1, 8(sp)
@@ -377,7 +393,7 @@ ret
 #
 #	
 # -----------------------------------------------------------------------------		
-fill_modifiedInstructionsArray:
+fill_modifiedInstructionsArray:	
 	addi sp, sp, -44
 	sw ra, 0(sp)
 	sw s0, 4(sp)
@@ -481,6 +497,7 @@ fill_modifiedInstructionsArray:
 		j insertDone
 
 		insertJAL:
+		ebreak
 		#get immediate
 		mv a0, s6 #a0 <- branch instruction
 		jal ra, getJalImm
@@ -542,7 +559,8 @@ fill_modifiedInstructionsArray:
 	lw s6, 28(sp)
 	lw s7, 32(sp)
 	lw s8, 36(sp)
-	addi sp, sp, 40
+	lw s9, 40(sp)
+	addi sp, sp, 44
 	ret
 # -----------------------------------------------------------------------------
 # makePrediction:
@@ -579,6 +597,7 @@ makePrediction:
 
 	mv s0, a0
 	#set activebranch to branchID
+#ebreak
 	la s1, activeBranch
 	sw s0, 0(s1)
 
@@ -617,6 +636,7 @@ makePrediction:
 
 
 	makePredictionEnd:
+#ebreak
 	la s0, output
 	sw s3, 0(s0)
 
@@ -634,7 +654,7 @@ makePrediction:
 	lw s4, 20(sp)
 	lw s5, 24(sp)
 	lw s6, 28(sp)
-	addi sp, sp, -32
+	addi sp, sp, 32
 
 ret
 # -----------------------------------------------------------------------------
@@ -672,14 +692,18 @@ trainPredictor:
 	sw s7, 32(sp)
 	
 	mv s0, a0
-
+	
+#ebreak
+	#load active branch
+	lw s3, activeBranch
+	bltz s3, trainPredictorExit
+	
 	#load output
 	lw s1, output
 
 	#load output sign
 	bltz s1, setNegativeSign
 	
-	ebreak
 	setPositiveSign:
 	li s2, 1
 	j isPredictionCorrect
@@ -702,11 +726,15 @@ trainPredictor:
 	lw s3, threshold
 
 	#check if OUTPUT > Threshold
+	bgtz s1, checkThreshold
+	neg s5, s1
+	bgt s5, s3, trainPredictorEnd 
+	
+	checkThreshold:
 	bgt s1, s3, trainPredictorEnd 
 	
 	#retrieve weights
 	lw s3, activeBranch
-
 	slli s3, s3, 2 #s3 <- branchID * 4
 	la s4, patternHistoryTable
 	add s3, s3, s4 #s3 <- &patternhistorytable[branchID]
@@ -720,7 +748,7 @@ trainPredictor:
 	addi s4, s4, 1
 
 	#retrieve globalHistoryRegister
-	lb s5, globalHistoryRegister
+	lbu s5, globalHistoryRegister
 	slli s5, s5, 24
 
 	li s6, 8
@@ -750,8 +778,12 @@ trainPredictor:
 		j calculateNewWeight
 
 	trainPredictorEnd:
+	lw a0, activeBranch
+	mv a1, s0
+	jal ra, printthis
+#ebreak
 	#shift globalshift predictor by 1
-	lb s5, globalHistoryRegister
+	lbu s5, globalHistoryRegister
 	srli s5, s5, 1
 	sgtz s1, s0 #s1 <- 1 if s0 == 1, 0 if s0 == -1
 	slli s1, s1, 7 #shift 0th bit to 7th bit
@@ -763,7 +795,8 @@ trainPredictor:
 	li s1, -1
 	la s2, activeBranch
 	sw s1, 0(s2)
-
+	
+	trainPredictorExit:
 	lw ra, 0(sp)
 	lw s0, 4(sp)
 	lw s1, 8(sp)
@@ -773,7 +806,7 @@ trainPredictor:
 	lw s5, 24(sp)
 	lw s6, 28(sp)
 	lw s7, 32(sp)
-	addi sp, sp, -36
+	addi sp, sp, 36
 
 ret
 # -----------------------------------------------------------------------------
@@ -963,12 +996,12 @@ insertResolveInstructions:
 getJalImm:
 	li t6, 0
 	
-	li t5, 0xF0000000
+	li t5, 0x80000000
 	and t0, a0, t5 #20
 	srli t0, t0, 11
 	or t6, t6, t0 
 	
-	li t5, 0x8FE00000
+	li t5, 0x7FE00000
 	and t1, a0, t5 #10:1
 	srli t1, t1, 20
 	or t6, t6, t1
@@ -983,6 +1016,8 @@ getJalImm:
 	or t6, t6, t3
 
 	mv a0, t6
+	slli a0, a0, 11
+	srai a0, a0, 11
 
 	ret
 # ----------------------------------------------------------------------------
@@ -1022,7 +1057,7 @@ setJalImm:
 	li t5, 0x00100000
 	and t3, a1, t5 #20
 	slli t3, t3, 11
-	or a0, a0, t2
+	or a0, a0, t3
 
 ret	
 # ----------------------------------------------------------------------------
@@ -1318,3 +1353,75 @@ printWeights:
 
 	ret
 
+# -----------------------
+#Print This Helper
+#------------------------
+printthis:
+    addi sp, sp, -16
+    sw ra, 0(sp)
+    sw s1, 4(sp)
+    sw s2, 8(sp)
+    sw s10, 12(sp)
+    
+    
+    
+#put active branch in s1
+    mv s1, a0
+    
+    li    t1 , -1
+    beq    t1,  s1 , endofprint
+    la     t1, patternHistoryTable
+    slli   t2, s1, 2
+    add    t2, t1, t2
+    lw     s2, 0(t2)
+    li     a7, 4
+    la     a0, branch_prefix
+    ecall
+    mv     a0, s1
+    li     a7, 1
+    ecall
+    
+    li     a7, 4
+    la     a0, ActualOutcomeText
+    ecall
+    mv a0, a1
+    li a7, 1
+    ecall
+    
+    li     a7, 4
+    la     a0, ghr_prefix
+    ecall
+    la     t0, globalHistoryRegister
+    lbu    t1, 0(t0)
+    mv     a0, t1
+    li     a7, 1
+    ecall
+    li     a7, 4
+    la     a0, weights_prefix
+    ecall
+    li     s10, 0
+lmaoidontlikethislab:
+    li     t0, 9
+    bge    s10, t0, imdonewiththislab
+    add    t1, s2, s10
+    lb     t2, 0(t1)
+    mv     a0, t2
+    li     a7, 1
+    ecall
+    li     a0, 32
+    li     a7, 11
+    ecall
+    addi   s10, s10, 1
+    j      lmaoidontlikethislab
+imdonewiththislab:
+    li     a0, 10 
+    li     a7, 11
+    ecall
+endofprint:
+
+    lw ra, 0(sp)
+    lw s1, 4(sp)
+    lw s2, 8(sp)
+    lw s10, 12(sp)
+    addi sp, sp, 16
+    ret
