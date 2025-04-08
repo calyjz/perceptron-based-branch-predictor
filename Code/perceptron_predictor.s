@@ -487,8 +487,14 @@ fill_modifiedInstructionsArray:
 		jal ra, insertResolveInstructions
 		addi s1, s1, 16 #increment modified pointer by 16 (4 instructions)
 		
+		#jump to insert branch if target is a branch
 		li s7, 3
 		beq s5, s7, insertBranch
+		
+		#jump to insert jal if target is a jal
+		andi s4, s6, 0x7F #s4 <- opcode of instruction
+		li s7, 0x6f
+		beq s4, s7, insertJAL
 		
 		#insert target instruction
 		sw s6, 0(s1) 
@@ -497,7 +503,6 @@ fill_modifiedInstructionsArray:
 		j insertDone
 
 		insertJAL:
-		ebreak
 		#get immediate
 		mv a0, s6 #a0 <- branch instruction
 		jal ra, getJalImm
@@ -512,8 +517,14 @@ fill_modifiedInstructionsArray:
 		srai s4, a0, 2 #s4 <- immediate //4
 		add s4, s4, s2 #s4 <- instructionindicator[i] +/- immediate//4
 		lb s4, 0(s4) #s4 <- instrunctionindicator[target]
+		
 		li s7, 3
-		bne s4, s7, skipSubtractSetup2
+		beq s4, s7, subtractSetup
+		li s7, 1
+		beq s4, s7, subtractSetup
+		j skipSubtractSetup2
+		
+		subtractSetup:
 		addi s8, s8, -7
 		skipSubtractSetup2:
 		
@@ -693,12 +704,12 @@ trainPredictor:
 	
 	mv s0, a0
 	
-#ebreak
 	#load active branch
 	lw s3, activeBranch
 	bltz s3, trainPredictorExit
 	
 	#load output
+#ebreak
 	lw s1, output
 
 	#load output sign
@@ -712,7 +723,7 @@ trainPredictor:
 
 	isPredictionCorrect:
 	#check if sign of OUTPUT == sign of a0.
-	bne s2, s0, updateWeights
+	bne s2, s0, calculateBiasedWeight
 
 	#add one to numCorrectPredictions
 	la s3, numCorrectPredictions
@@ -721,18 +732,19 @@ trainPredictor:
 	sw s4, 0(s3)
 	
 
-	updateWeights:
+	checkThreshold:
 	#load threshold
 	lw s3, threshold
 
 	#check if OUTPUT > Threshold
-	bgtz s1, checkThreshold
+	bltz s1, checkNegativeThreshold
+	bgt s1, s3, trainPredictorEnd
+	
+	checkNegativeThreshold:
 	neg s5, s1
 	bgt s5, s3, trainPredictorEnd 
 	
-	checkThreshold:
-	bgt s1, s3, trainPredictorEnd 
-	
+	calculateBiasedWeight:
 	#retrieve weights
 	lw s3, activeBranch
 	slli s3, s3, 2 #s3 <- branchID * 4
