@@ -105,3 +105,4 @@ Branch id 3: [ -31 31 -3 -3 -1 1 -1 -9 79 ]
 Total branch instructions executed: 511
 Total correct predictions: 437
 Branch predictor accuracy: 85.51859%
+
