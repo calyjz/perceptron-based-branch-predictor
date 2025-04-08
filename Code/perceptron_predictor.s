@@ -608,7 +608,6 @@ makePrediction:
 
 	mv s0, a0
 	#set activebranch to branchID
-#ebreak
 	la s1, activeBranch
 	sw s0, 0(s1)
 
@@ -647,7 +646,6 @@ makePrediction:
 
 
 	makePredictionEnd:
-#ebreak
 	la s0, output
 	sw s3, 0(s0)
 
@@ -709,7 +707,6 @@ trainPredictor:
 	bltz s3, trainPredictorExit
 	
 	#load output
-#ebreak
 	lw s1, output
 
 	#load output sign
@@ -790,10 +787,10 @@ trainPredictor:
 		j calculateNewWeight
 
 	trainPredictorEnd:
-	lw a0, activeBranch
-	mv a1, s0
-	jal ra, printthis
-#ebreak
+	#lw a0, activeBranch
+	#mv a1, s0
+	#jal ra, printthis
+
 	#shift globalshift predictor by 1
 	lbu s5, globalHistoryRegister
 	srli s5, s5, 1
@@ -1003,7 +1000,12 @@ insertResolveInstructions:
 #	a0: sign extended immediate
 #
 # Register Usage:
-#
+#	t0: 20 bit of the immediate
+#	t1: 10:1 bit of hte immediate
+#	t2: 11 bit of hte immediate
+#	t3: 19:12 bit of hte immediate
+#	t5: mask
+#	t6: immediate
 # -----------------------------------------------------------------------------
 getJalImm:
 	li t6, 0
@@ -1046,7 +1048,11 @@ getJalImm:
 #	a0: the modified jal instruction with the new immediate
 #
 # Register Usage:
-#
+#	t0: 10:1 bit of the immediate
+#	t1: 11 bit of hte immediate
+#	t2: 19:12 bit of hte immediate
+#	t3: 20 bit of hte immediate
+#	t5: mask
 # -----------------------------------------------------------------------------
 setJalImm:
 	li t5, 0xFFF
@@ -1364,76 +1370,3 @@ printWeights:
 	addi sp, sp, 16
 
 	ret
-
-# -----------------------
-#Print This Helper
-#------------------------
-printthis:
-    addi sp, sp, -16
-    sw ra, 0(sp)
-    sw s1, 4(sp)
-    sw s2, 8(sp)
-    sw s10, 12(sp)
-    
-    
-    
-#put active branch in s1
-    mv s1, a0
-    
-    li    t1 , -1
-    beq    t1,  s1 , endofprint
-    la     t1, patternHistoryTable
-    slli   t2, s1, 2
-    add    t2, t1, t2
-    lw     s2, 0(t2)
-    li     a7, 4
-    la     a0, branch_prefix
-    ecall
-    mv     a0, s1
-    li     a7, 1
-    ecall
-    
-    li     a7, 4
-    la     a0, ActualOutcomeText
-    ecall
-    mv a0, a1
-    li a7, 1
-    ecall
-    
-    li     a7, 4
-    la     a0, ghr_prefix
-    ecall
-    la     t0, globalHistoryRegister
-    lbu    t1, 0(t0)
-    mv     a0, t1
-    li     a7, 1
-    ecall
-    li     a7, 4
-    la     a0, weights_prefix
-    ecall
-    li     s10, 0
-lmaoidontlikethislab:
-    li     t0, 9
-    bge    s10, t0, imdonewiththislab
-    add    t1, s2, s10
-    lb     t2, 0(t1)
-    mv     a0, t2
-    li     a7, 1
-    ecall
-    li     a0, 32
-    li     a7, 11
-    ecall
-    addi   s10, s10, 1
-    j      lmaoidontlikethislab
-imdonewiththislab:
-    li     a0, 10 
-    li     a7, 11
-    ecall
-endofprint:
-
-    lw ra, 0(sp)
-    lw s1, 4(sp)
-    lw s2, 8(sp)
-    lw s10, 12(sp)
-    addi sp, sp, 16
-    ret
