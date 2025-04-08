@@ -28,11 +28,11 @@
 #          cmput229@ualberta.ca
 #
 #------------------------------------------------------------------------------
-# CCID:                 
-# Lecture Section:      
-# Instructor:           
-# Lab Section:          
-# Teaching Assistant:   
+# CCID: cjzheng
+# Lecture Section: B1
+# Instructor: J Nelson Amaral
+# Lab Section: H02
+# Teaching Assistant: Patrick Zijlstra
 #-----------------------------------------------------------------------------
 .data 
 
@@ -49,6 +49,11 @@ numBranches:				.word 0
 numBranchesExecuted:			.word 0
 .align 2	
 numCorrectPredictions:			.word 0
+
+branch_prefix:    .asciz "[branch ID: "
+ghr_prefix:       .asciz "-- ghr: "
+weights_prefix:   .asciz " -- weight: "
+ActualOutcomeText: .asciz "] -- outcome: "
 
 .include "common.s"
 
@@ -69,10 +74,89 @@ numCorrectPredictions:			.word 0
 # 	None
 #
 # Register Usage:
-#
+#	s0: Pointer to originalInstructionsArray
+#	s1: Pointer to modifiedInstructionsArray
+# 	s2: Pointer to instructionIndicatorsArray
+#	s3: Pointer to numPriorInsertionsArray
+#	s4: i in for loop for allocating memory
+#	s5: pointer to patternHistoryTable
 # -----------------------------------------------------------------------------	
 perceptronPredictor:
+	addi sp, sp, -28
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	
+	mv s0, a0 #s0 -> Pointer to originalInstructionsArray
+	mv s1, a1 #s1 -> Pointer to modifiedInstructionsArray
+	mv s2, a2 #s2 -> Pointer to instructionIndicatorsArray
+	mv s3, a3 #s3 -> Pointer to numPriorInsertionsArray
 
+	#call fill_instructionIndicatorsArray
+	mv a0, s0 #a0 -> Pointer to originalInstructionsArray
+	mv a1, s2 #a1 -> Pointer to instructionIndicatorsArray
+	jal ra, fill_instructionIndicatorsArray
+
+	#call fill_numPriorInsertionsArray
+	mv a0, s2 #a0 -> Pointer to instructionIndicatorsArray
+	mv a1, s3 #a1 -> Pointer to numPriorInsertionsArray
+	jal ra, fill_numPriorInsertionsArray
+
+	#call fill_modifiedInstructionsArray
+	mv a0, s0 #s0 -> Pointer to originalInstructionsArray
+	mv a1, s1 #s1 -> Pointer to modifiedInstructionsArray
+	mv a2, s2 #s2 -> Pointer to instructionIndicatorsArray
+	mv a3, s3 #s3 -> Pointer to numPriorInsertionsArray
+	jal ra, fill_modifiedInstructionsArray
+	
+	#dynamically allocate memory for weights in pattern history
+	lw s4, numBranches
+	la s5, patternHistoryTable
+	
+	allocateMemoryLoop:
+		beqz s4, allocateMemoryDone
+		li a0, 9 #allocate 9 bytes
+		li a7, 9
+		ecall
+
+		sw a0, 0(s5)
+
+		addi s5, s5, 4
+		addi s4, s4, -1
+		j allocateMemoryLoop
+
+	allocateMemoryDone:
+	#add -1 at the end of pattern history table
+	li s4, -1
+	sw s4, 0(s5)
+	
+	ebreak
+	la t0, modifiedInstructionsArray
+	lw t1, 0(t0)
+	sw t1, 0(t0)
+	jalr ra, t0, 0
+
+	mv a0, s1 #a0 <- Pointer to modifiedInstructionsArray
+	lw a1, numBranches
+	addi a1, a1, -1 #a1 <- num of branches - 1 = Max branch Id
+	lw a2, numBranchesExecuted
+	lw a3, numCorrectPredictions
+
+	jal ra, printResults
+
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	addi sp, sp, 28
+	
 ret
 # -----------------------------------------------------------------------------
 # fill_instructionIndicatorsArray:
@@ -87,19 +171,107 @@ ret
 # 	None
 #
 # Register Usage:
-#	
+# 	s0: Pointer to originalInstructionsArray
+#	s1: Pointer to instructionIndicatorsArray
+#	s2: index i
+#	s3: sentinel value (-1)
+#	s4: opcode for branch
+#	s5-s7: intermediate calculations
 # -----------------------------------------------------------------------------		
 fill_instructionIndicatorsArray:
-	#iterate through the original instructions array
-		#if instruction is a branch instruction, otherwise go to next i
-			#add 1 to instructionindicatorarray[i]
+	addi sp, sp, -36
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	sw s6, 28(sp)
+	sw s7, 32(sp)
+	
+	mv s0, a0 #s0 <- Pointer to originalInstructionsArray
+	mv s1, a1 #s1 <- Pointer to instructionIndicatorsArray
+	li s3, -1
 
-			#get immediate (difference in address between branch and target)
-			#divide immediate by 4 (difference in instructions between branch and target)
-			#add 2 to instructionindicatorarray[i + immediate//4)
-			
+	#set all values to 0
+	mv s2, s0
+	mv s4, s1
+	fillInstructionZeroLoop:
+	lw s5, 0(s2) #check if value == -1
+	beq s3, s5, fillInstructionZeroLoopEnd
+
+	sb zero, 0(s4) #store zero in instructionindicator array
+	addi s2, s2, 4
+	addi s4, s4, 1
+	j fillInstructionZeroLoop
+	fillInstructionZeroLoopEnd:
+	
+	#reset numBranches
+	la s2, numBranches
+	sw zero, 0(s2)
+	
+
+	li s4, 99 #s4 <- opcode for branch
+
+	lw s2, 0(s0)
+	beq s2, s3, fillInstructionEnd
+
+	#iterate through the original instructions array
+	fillInstructionLoop:
+		addi s0, s0, 4
+		addi s1, s1, 1
+
+		#end condition: if originalInstructions[i] == -1
+		lw s2, 0(s0)
+		beq s2, s3, fillInstructionEnd
 		
-ret
+		#break: if not branch instruction
+		li s5, 0x7F
+		and s5, s5, s2
+		bne s5, s4, fillInstructionLoop
+
+
+		lb s5, 0(s1)
+		addi s5, s5, 1
+		sb s5, 0(s1)
+
+		mv a0, s2
+		jal ra, getBranchImm
+		mv s6, a0 #s5 <- immediate of branch instruction
+		
+		add s7, s6, s0
+		lw s7, 0(s7)
+		
+		srai s6, s6, 2 #s6 <- s6 //4
+		add s6, s6, s1 #s5 <- &instructionIndicator[i] + immediate
+		lb s5, 0(s6)
+		addi s5, s5, 2
+		sb s5, 0(s6)
+
+		#increment numBranches
+		la s6, numBranches
+		lw s5, numBranches
+		addi s5, s5, 1
+		sw s5, 0(s6)
+
+		j fillInstructionLoop
+
+
+	fillInstructionEnd:
+	sb s3, 0(s1) #store -1 at the end of instructionIndicator Array
+	
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	lw s6, 28(sp)
+	lw s7, 32(sp)
+	addi sp, sp, 36
+	ret
 # -----------------------------------------------------------------------------
 # fill_numPriorInsertionsArray:
 #
@@ -114,10 +286,81 @@ ret
 # 	None
 #
 # Register Usage:
+# 	s0: Pointer to instructionIndicatorsArray
+#	s1: Pointer to numPriorInsertionsArray
+# 	s2: cumulative value
+#	s3: branch previous 
+#	s4: -1
+#	s5: instructionindicator[i]
+#	s6-s7: Intermediate values
 #
 # -----------------------------------------------------------------------------		
 fill_numPriorInsertionsArray:
+	addi sp, sp, -36
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	sw s6, 28(sp)
+	sw s7, 32(sp)
 
+	mv s0, a0
+	mv s1, a1
+
+	li s2, 0 #s2 <- current value
+	li s3, 0 #s3 <- branch previous (4 if true, 0 if false)
+	li s4, -1 #s4 <- end condition
+
+	fillNumPriorLoop:
+		lb s5, 0(s0) #s4 <- instructionindicator[i]
+		beq s4, s5, fillNumPriorEnd
+
+		add s2, s2, s3 ##s2 <- s2 + 0 or s2 + 4, accounts for fallthrough resolve
+		li s3, 0 #reset branch previous
+
+		li s6, 1
+		beq s5, s6, fillBranch
+		li s6, 2
+		beq s5, s6, fillTarget
+		li s6, 3
+		beq s5, s6, fillBranchAndTarget
+		j storePrior
+		
+		fillBranch:
+			addi s2, s2, 7
+			li s3, 4
+			j storePrior
+		fillTarget:
+			addi s2, s2, 4
+			j storePrior
+		fillBranchAndTarget:
+			addi s2, s2, 11
+			li s3, 4
+			j storePrior
+		
+		storePrior:
+		sw s2, 0(s1) #numPrior[i] = last value
+
+		addi s0, s0, 1
+		addi s1, s1, 4
+		j fillNumPriorLoop
+	
+	fillNumPriorEnd:
+	sw s4, 0(s1)
+	
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	lw s6, 28(sp)
+	lw s7, 32(sp)
+	addi sp, sp, 36
 ret
 # -----------------------------------------------------------------------------
 # fill_modifiedInstructionsArray:
@@ -137,11 +380,199 @@ ret
 # 	None
 #
 # Register Usage:
+#	s0: Pointer to originalInstructionsArray
+#	s1: Pointer to modifiedInstructionsArray
+#	s2: Pointer to instructionIndicatorsArray
+# 	s3: Pointer to numPriorInsertionsArray 
+#	s4: intermediate calculations
+#	s5: indicator[i]
+#	s6: originalinstruction[i]
+#	s7: intermediate calculations
+#	s8: intermediate calculations
+#	s9: Branch ID
 #
+#	
 # -----------------------------------------------------------------------------		
-fill_modifiedInstructionsArray:
+fill_modifiedInstructionsArray:	
+	addi sp, sp, -44
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	sw s6, 28(sp)
+	sw s7, 32(sp)
+	sw s8, 36(sp)
+	sw s9, 40(sp)
+	
+	mv s0, a0 #pointer to original
+	mv s1, a1 #pointer to modified
+	mv s2, a2 #pointer to indicator
+	mv s3, a3 #pointer to start of numprior
 
-ret
+	li s9, 0 #branch ID
+
+	fillModifiedLoop:
+		lb s5, 0(s2) #s5 <- indicator[i]
+		li s4, -1
+		beq s4, s5, fillModifiedEnd
+		
+		lw s6, 0(s0) #originalinstruction[i]
+		
+		li s7, 1
+		beq s5, s7, insertBranch
+		li s7, 2
+		beq s5, s7, insertTarget
+		li s7, 3
+		beq s5, s7, insertTarget
+
+		#check if instruction is a jal
+		andi s4, s6, 0x7F #s4 <- opcode of instruction
+		li s7, 0x6f
+		beq s4, s7, insertJAL
+
+		j insertNone
+		
+		insertBranch:
+		mv a0, s1 #a0 <- Pointer to the location in modifiedInstructionsArray to store the sequence of setup instructions
+		mv a1, s9 #a1 <- Branch id
+		jal ra, insertSetupInstructions
+		addi s1, s1, 28 #increment modified pointer by 28 (7 instructions)
+
+		#get immediate
+		mv a0, s6 #a0 <- branch instruction
+		jal ra, getBranchImm
+		
+		#calculate inserted instructions
+		add s8, s3, a0 #s8 <- &numprior[target] = numprior[branch] + immediate
+		lw s8, 0(s8) 
+		lw s7, 0(s3)
+		sub s8, s8, s7 #s8 <- numprior[target] - numprior[branch]
+		addi s8, s8, -4	#s8 <- subtract 4 instructions for resolve(1)
+		
+		#subtract setup instructions if branch
+		srai s4, a0, 2 #s4 <- immediate //4
+		add s4, s4, s2 #s4 <- instructionindicator[i] +/- immediate//4
+		lb s4, 0(s4) #s4 <- instrunctionindicator[target]
+		li s7, 3
+		bne s4, s7, skipSubtractSetup
+		addi s8, s8, -7
+		skipSubtractSetup:
+		
+		slli s8, s8, 2 #s8 <- (total instructions inserted)*4 = added offset
+
+		add a1, a0, s8 #s8 <- new immediate = immediate + added offset
+		mv a0, s6
+		jal ra, setBranchImm
+		
+		#insert branch instruction
+		sw a0, 0(s1)
+		addi s1, s1, 4 #increment modified pointer
+		addi s9, s9, 1 #increment branch ID
+
+		#insert resolve(-1)
+		mv a0, s1
+		li a1, 0
+		jal ra, insertResolveInstructions
+		addi s1, s1, 16 #increment modified pointer by 16 (4 instructions)
+		
+		j insertDone
+
+		insertTarget:
+		#insert resolve(1)
+		mv a0, s1
+		li a1, 1
+		jal ra, insertResolveInstructions
+		addi s1, s1, 16 #increment modified pointer by 16 (4 instructions)
+		
+		#jump to insert branch if target is a branch
+		li s7, 3
+		beq s5, s7, insertBranch
+		
+		#jump to insert jal if target is a jal
+		andi s4, s6, 0x7F #s4 <- opcode of instruction
+		li s7, 0x6f
+		beq s4, s7, insertJAL
+		
+		#insert target instruction
+		sw s6, 0(s1) 
+		addi s1, s1, 4
+			
+		j insertDone
+
+		insertJAL:
+		#get immediate
+		mv a0, s6 #a0 <- branch instruction
+		jal ra, getJalImm
+		
+		#calculate inserted instructions
+		add s8, s3, a0 #s8 <- &numprior[target] = numprior[branch] + immediate
+		lw s8, 0(s8) 
+		lw s7, 0(s3)
+		sub s8, s8, s7 #s8 <- numprior[target] - numprior[branch]
+		
+		#subtract setup instructions if branch
+		srai s4, a0, 2 #s4 <- immediate //4
+		add s4, s4, s2 #s4 <- instructionindicator[i] +/- immediate//4
+		lb s4, 0(s4) #s4 <- instrunctionindicator[target]
+		
+		li s7, 3
+		beq s4, s7, subtractSetup
+		li s7, 1
+		beq s4, s7, subtractSetup
+		j skipSubtractSetup2
+		
+		subtractSetup:
+		addi s8, s8, -7
+		skipSubtractSetup2:
+		
+		
+		slli s8, s8, 2 #s8 <- (total instructions inserted)*4 = added offset
+
+		add a1, a0, s8 #s8 <- new immediate = immediate + added offset
+		mv a0, s6
+		
+		jal ra, setJalImm
+		
+		#insert jal instruction
+		sw a0, 0(s1)
+		addi s1, s1, 4 #increment modified pointer
+
+		j insertDone
+
+		insertNone:
+		#insert instruction
+		sw s6, 0(s1) 
+		addi s1, s1, 4
+			
+		
+		insertDone:
+		addi s0, s0, 4 #increments originalinstruction array
+		addi s2, s2, 1 #increments instruction indicator byte array
+		addi s3, s3, 4 #increments num prior array
+		j fillModifiedLoop
+	
+
+
+	fillModifiedEnd:
+	li s4, -1
+	sw s4, 0(s1)
+	
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	lw s6, 28(sp)
+	lw s7, 32(sp)
+	lw s8, 36(sp)
+	lw s9, 40(sp)
+	addi sp, sp, 44
+	ret
 # -----------------------------------------------------------------------------
 # makePrediction:
 #
@@ -156,9 +587,85 @@ ret
 # 	None
 #
 # Register Usage:
-#	
+#	s0: branch ID
+#	s1: globalhistory
+#	s2: patternhistorytable[branchID]
+#	s3: sum
+#	s4: loop counter
+#	s5: globalhistory
+#	s6: patternhistorytable[branchID][i+1]
 # -----------------------------------------------------------------------------			
 makePrediction:
+	addi sp, sp, -32
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	sw s6, 28(sp)
+
+	mv s0, a0
+	#set activebranch to branchID
+#ebreak
+	la s1, activeBranch
+	sw s0, 0(s1)
+
+	slli s1, s0, 2 #s1 <- branchID * 4
+	la s2, patternHistoryTable
+	add s1, s1, s2
+	lw s2, 0(s1) #s2 <- patternhistorytable[branchID]
+
+	lb s3, 0(s2) #sum += bias input
+	addi s2, s2, 1 
+
+	lb s1, globalHistoryRegister
+	slli s1, s1, 24
+
+	li s4, 8
+	calculatePrediction:
+		beqz s4, makePredictionEnd
+		lb s6, 0(s2) #s6 <- patternhistorytable[branchID][i]
+		
+		#check greatest bit. If 1, then s1 is less than zero. If 0, then s1 is greater or equal than zero
+		bltz s1, calculateTaken
+		
+		calculateNotTaken:
+		sub s3, s3, s6 #add to sum
+		addi s2, s2, 1 #next weight
+		slli s1, s1, 1 #shift globalhistory bits to the left
+		addi s4, s4, -1 #decrement counter
+		j calculatePrediction
+
+		calculateTaken:
+		add s3, s3, s6
+		addi s2, s2, 1
+		slli s1, s1, 1
+		addi s4, s4, -1
+		j calculatePrediction
+
+
+	makePredictionEnd:
+#ebreak
+	la s0, output
+	sw s3, 0(s0)
+
+	#add one to numBranchesExecuted
+	la s0, numBranchesExecuted
+	lw s1, numBranchesExecuted
+	addi s1, s1, 1
+	sw s1, 0(s0)
+	
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	lw s6, 28(sp)
+	addi sp, sp, 32
 
 ret
 # -----------------------------------------------------------------------------
@@ -174,9 +681,144 @@ ret
 # 	None
 #
 # Register Usage:
-#
+#	s0: Actual branch outcome (1 if taken, else -1)
+#	s1: Output
+#	s2: sign of output
+#	s3: load weight and store new weight
+#	s4: PatternHistoryTable[ActiveBranchID] = address of weight array
+#	s5: globalHistoryRegister
+#	s6: counter for for loop
+#	s7: x_i and x_i * t
 # -----------------------------------------------------------------------------		
 trainPredictor:
+	addi sp, sp, -36
+	sw ra, 0(sp)
+	sw s0, 4(sp)
+	sw s1, 8(sp)
+	sw s2, 12(sp)
+	sw s3, 16(sp)
+	sw s4, 20(sp)
+	sw s5, 24(sp)
+	sw s6, 28(sp)
+	sw s7, 32(sp)
+	
+	mv s0, a0
+	
+	#load active branch
+	lw s3, activeBranch
+	bltz s3, trainPredictorExit
+	
+	#load output
+#ebreak
+	lw s1, output
+
+	#load output sign
+	bltz s1, setNegativeSign
+	
+	setPositiveSign:
+	li s2, 1
+	j isPredictionCorrect
+	setNegativeSign:
+	li s2, -1
+
+	isPredictionCorrect:
+	#check if sign of OUTPUT == sign of a0.
+	bne s2, s0, calculateBiasedWeight
+
+	#add one to numCorrectPredictions
+	la s3, numCorrectPredictions
+	lw s4, numCorrectPredictions
+	addi s4, s4, 1
+	sw s4, 0(s3)
+	
+
+	checkThreshold:
+	#load threshold
+	lw s3, threshold
+
+	#check if OUTPUT > Threshold
+	bltz s1, checkNegativeThreshold
+	bgt s1, s3, trainPredictorEnd
+	
+	checkNegativeThreshold:
+	neg s5, s1
+	bgt s5, s3, trainPredictorEnd 
+	
+	calculateBiasedWeight:
+	#retrieve weights
+	lw s3, activeBranch
+	slli s3, s3, 2 #s3 <- branchID * 4
+	la s4, patternHistoryTable
+	add s3, s3, s4 #s3 <- &patternhistorytable[branchID]
+	lw s4, 0(s3) #s2 <- patternhistorytable[branchID] = weights
+
+	#calculate and store the weight of the biased input
+	lb s3, 0(s4) #s3 <- weight[0]
+	add s3, s3, s0 #s3 <- weight[0] + branch outcome * 1
+	sb s3, 0(s4) # new weight -> weight[0]
+	#next weight
+	addi s4, s4, 1
+
+	#retrieve globalHistoryRegister
+	lbu s5, globalHistoryRegister
+	slli s5, s5, 24
+
+	li s6, 8
+
+	calculateNewWeight:
+		beqz s6, trainPredictorEnd
+		lb s3, 0(s4) #s6 <- weights[i]
+
+		#check greatest bit. If 1, then s1 is less than zero. If 0, then s1 is greater or equal than zero
+		bltz s5, calculateTakenWeight
+
+		calculateNotTakenWeight:
+		li s7, -1 #x_i
+		j calculateWeight
+		calculateTakenWeight:
+		li s7, 1 #x_i
+
+		calculateWeight:
+		mul s7, s7, s0 #t * x_i
+
+		add s3, s3, s7 #s3 <- weight[i] + t * x_i
+		sb s3, 0(s4) # new weight -> weight[0]
+
+		addi s4, s4, 1 #next weight
+		slli s5, s5, 1 #shift globalhistory bits to the left
+		addi s6, s6, -1 #decrement counter
+		j calculateNewWeight
+
+	trainPredictorEnd:
+	lw a0, activeBranch
+	mv a1, s0
+	jal ra, printthis
+#ebreak
+	#shift globalshift predictor by 1
+	lbu s5, globalHistoryRegister
+	srli s5, s5, 1
+	sgtz s1, s0 #s1 <- 1 if s0 == 1, 0 if s0 == -1
+	slli s1, s1, 7 #shift 0th bit to 7th bit
+	or s1, s1, s5
+	la s5, globalHistoryRegister
+	sw s1, 0(s5)
+
+	#set active branch to -1
+	li s1, -1
+	la s2, activeBranch
+	sw s1, 0(s2)
+	
+	trainPredictorExit:
+	lw ra, 0(sp)
+	lw s0, 4(sp)
+	lw s1, 8(sp)
+	lw s2, 12(sp)
+	lw s3, 16(sp)
+	lw s4, 20(sp)
+	lw s5, 24(sp)
+	lw s6, 28(sp)
+	lw s7, 32(sp)
+	addi sp, sp, 36
 
 ret
 # -----------------------------------------------------------------------------
@@ -364,8 +1006,32 @@ insertResolveInstructions:
 #
 # -----------------------------------------------------------------------------
 getJalImm:
+	li t6, 0
+	
+	li t5, 0x80000000
+	and t0, a0, t5 #20
+	srli t0, t0, 11
+	or t6, t6, t0 
+	
+	li t5, 0x7FE00000
+	and t1, a0, t5 #10:1
+	srli t1, t1, 20
+	or t6, t6, t1
+	
+	li t5, 0x00100000
+	and t2, a0, t5 #11
+	srli t2, t2, 9
+	or t6, t6, t2
+	
+	li t5, 0x000FF000
+	and t3, a0, t5 #19:12
+	or t6, t6, t3
 
-ret
+	mv a0, t6
+	slli a0, a0, 11
+	srai a0, a0, 11
+
+	ret
 # ----------------------------------------------------------------------------
 # setJalImm (helper):
 #
@@ -383,6 +1049,27 @@ ret
 #
 # -----------------------------------------------------------------------------
 setJalImm:
+	li t5, 0xFFF
+	and a0, a0, t5 #set immediate to 0
+	
+	li t5, 0x7FE
+	and t0, a1, t5 #10:1
+	slli t0, t0, 20
+	or a0, a0, t0
+	
+	li t5, 0x800
+	and t1, a1, t5 #11
+	slli t1, t1, 9
+	or a0, a0, t1
+	
+	li t5, 0xFF000
+	and t2, a1, t5 #19:12
+	or a0, a0, t2
+	
+	li t5, 0x00100000
+	and t3, a1, t5 #20
+	slli t3, t3, 11
+	or a0, a0, t3
 
 ret	
 # ----------------------------------------------------------------------------
@@ -678,3 +1365,75 @@ printWeights:
 
 	ret
 
+# -----------------------
+#Print This Helper
+#------------------------
+printthis:
+    addi sp, sp, -16
+    sw ra, 0(sp)
+    sw s1, 4(sp)
+    sw s2, 8(sp)
+    sw s10, 12(sp)
+    
+    
+    
+#put active branch in s1
+    mv s1, a0
+    
+    li    t1 , -1
+    beq    t1,  s1 , endofprint
+    la     t1, patternHistoryTable
+    slli   t2, s1, 2
+    add    t2, t1, t2
+    lw     s2, 0(t2)
+    li     a7, 4
+    la     a0, branch_prefix
+    ecall
+    mv     a0, s1
+    li     a7, 1
+    ecall
+    
+    li     a7, 4
+    la     a0, ActualOutcomeText
+    ecall
+    mv a0, a1
+    li a7, 1
+    ecall
+    
+    li     a7, 4
+    la     a0, ghr_prefix
+    ecall
+    la     t0, globalHistoryRegister
+    lbu    t1, 0(t0)
+    mv     a0, t1
+    li     a7, 1
+    ecall
+    li     a7, 4
+    la     a0, weights_prefix
+    ecall
+    li     s10, 0
+lmaoidontlikethislab:
+    li     t0, 9
+    bge    s10, t0, imdonewiththislab
+    add    t1, s2, s10
+    lb     t2, 0(t1)
+    mv     a0, t2
+    li     a7, 1
+    ecall
+    li     a0, 32
+    li     a7, 11
+    ecall
+    addi   s10, s10, 1
+    j      lmaoidontlikethislab
+imdonewiththislab:
+    li     a0, 10 
+    li     a7, 11
+    ecall
+endofprint:
+
+    lw ra, 0(sp)
+    lw s1, 4(sp)
+    lw s2, 8(sp)
+    lw s10, 12(sp)
+    addi sp, sp, 16
+    ret

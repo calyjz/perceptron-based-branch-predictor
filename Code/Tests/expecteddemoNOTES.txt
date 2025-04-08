@@ -1,0 +1,175 @@
+This is your modifiedInstructionsArray:
+0xfec10113 inst
+0x00812023 
+0x00912223
+0x01212423
+0x01312623
+0x00112823
+0x01900413
+0x00000493
+0x00000913
+0x00000513 setup start
+0x100105b7
+0x00058593
+0x00a5a023
+0x004012b7
+0xd6828293 
+0x000280e7 setup end
+0x0e805463 NEW BRANCH
+0xfff00513 fallthrough start
+0x004012b7 
+0xdc028293 
+0x000280e7 fallthrough end
+0x00100513 target start
+0x004012b7
+0xdc028293 
+0x000280e7 target end
+0x0014f993 inst
+0x00100513 setup start
+0x100105b7
+0x00058593
+0x00a5a023 
+0x004012b7
+0xd6828293
+0x000280e7 setup end
+0x00999e63 NEW BRANCH
+0xfff00513 fallthrough start
+0x004012b7
+0xdc028293 #THIS IS WRONG
+0x000280e7 fallthrough end
+0x00990933 inst
+0x0580006f NEW JAL
+0x00100513 target start
+0x004012b7
+0xdc028293
+0x000280e7 target end
+0x00200513 setup start
+0x100105b7
+0x00058593 
+0x00a5a023 
+0x004012b7
+0xd6828293
+0x000280e7 setup end
+0x01240c63 NEW BRANCH
+0xfff00513 fallthrough start
+0x004012b7
+0xdc028293
+0x000280e7 fallthrough end
+0x00190913 addi s2, s2, 1
+0x00100513 target start
+0x004012b7
+0xdc028293
+0x000280e7 target end
+0x00148493 addi s1, s1, 1
+0x00300513 setup start
+0x100105b7
+0x00058593
+0x00a5a023
+0x004012b7
+0xd6828293
+0x000280e7 setup end
+0xf484c0e3 NEW BRANCH
+0xfff00513 fallthrough start
+0x004012b7
+0xdc028293
+0x000280e7 fallthrough end
+0x00100513 target start
+0x004012b7
+0xdc028293
+0x000280e7 target end
+0x00012403 lw s0, 0(sp)
+0x00412483
+0x00812903
+0x00c12983
+0x01012083
+0x01410113
+0x00008067
+These are your final perceptron weights:
+Branch id 0: [ -1 1 1 1 1 1 1 1 1 ]
+
+Branch id 1: [ 14 16 18 16 16 14 14 12 12 ]
+
+Branch id 2: [ -17 -17 -17 -17 -15 -15 -13 -13 -11 ]
+
+Branch id 3: [ 19 17 15 15 13 13 11 11 9 ]
+Total branch instructions executed: 74
+Total correct predictions: 67
+Branch predictor accuracy: 90.54054%
+
+
+branch ID: 0] -- outcome: -1-- ghr: 0 -- weight: -1 1 1 1 1 1 1 1 1 
+
+[branch ID: 1] -- outcome: -1-- ghr: 0 -- weight: -1 1 1 1 1 1 1 1 1 
+[branch ID: 3] -- outcome: 1-- ghr: 0 -- weight: 1 -1 -1 -1 -1 -1 -1 -1 -1 
+[branch ID: 1] -- outcome: -1-- ghr: 128 -- weight: -2 0 2 2 2 2 2 2 2 
+[branch ID: 3] -- outcome: 1-- ghr: 64 -- weight: 2 -2 0 -2 -2 -2 -2 -2 -2 
+[branch ID: 1] -- outcome: 1-- ghr: 160 -- weight: -1 1 1 3 1 1 1 1 1 
+[branch ID: 2] -- outcome: -1-- ghr: 208 -- weight: -1 -1 -1 1 -1 1 1 1 1 
+[branch ID: 3] -- outcome: 1-- ghr: 104 -- weight: 3 -3 1 -1 -3 -1 -3 -3 -3 
+[branch ID: 1] -- outcome: 1-- ghr: 180 -- weight: 0 2 0 4 2 0 2 0 0 
+[branch ID: 2] -- outcome: -1-- ghr: 218 -- weight: -2 -2 -2 2 -2 0 2 0 2 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 4 -4 2 0 -4 0 -2 -4 -2 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 1 3 -1 5 3 -1 3 1 -1 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -3 -3 -3 3 -3 -1 3 -1 1 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 5 -5 3 1 -5 1 -1 -5 -1 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 2 4 -2 6 4 -2 4 2 -2 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -4 -4 -4 4 -4 -2 4 -2 0 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 6 -6 4 2 -6 2 0 -6 0 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 3 5 -3 7 5 -3 5 3 -3 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -5 -5 -5 5 -5 -3 5 -3 -1 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 7 -7 5 3 -7 3 1 -7 1 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 4 6 -4 8 6 -4 6 4 -4 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -6 -6 -6 6 -6 -4 6 -4 -2 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 8 -8 6 4 -8 4 2 -8 2 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 5 7 -5 9 7 -5 7 5 -5 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -7 -7 -7 7 -7 -5 7 -5 -3 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 9 -9 7 5 -9 5 3 -9 3 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 6 8 -6 10 8 -6 8 6 -6 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -8 -8 -8 8 -8 -6 8 -6 -4 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 10 -10 8 6 -10 6 4 -10 4 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 7 9 -7 11 9 -7 9 7 -7 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -9 -9 -9 9 -9 -7 9 -7 -5 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 11 -11 9 7 -11 7 5 -11 5 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 8 10 -8 12 10 -8 10 8 -8 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -10 -10 -10 10 -10 -8 10 -8 -6 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 12 -12 10 8 -12 8 6 -12 6 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 9 11 -9 13 11 -9 11 9 -9 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -11 -11 -11 11 -11 -9 11 -9 -7 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 13 -13 11 9 -13 9 7 -13 7 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 10 12 -10 14 12 -10 12 10 -10 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -12 -12 -12 12 -12 -10 12 -10 -8 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 14 -14 12 10 -14 10 8 -14 8 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 11 13 -11 15 13 -11 13 11 -11 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -13 -13 -13 13 -13 -11 13 -11 -9 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 15 -15 13 11 -15 11 9 -15 9 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 12 14 -12 16 14 -12 14 12 -12 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -14 -14 -14 14 -14 -12 14 -12 -10 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 16 -16 14 12 -16 12 10 -16 10 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 13 15 -13 17 15 -13 15 13 -13 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -15 -15 -15 15 -15 -13 15 -13 -11 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 17 -17 15 13 -17 13 11 -17 11 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 14 16 -14 18 16 -14 16 14 -14 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -16 -16 -16 16 -16 -14 16 -14 -12 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 18 -18 16 14 -18 14 12 -18 12 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 15 17 -15 19 17 -15 17 15 -15 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -16 -16 -16 16 -16 -14 16 -14 -12 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 19 -19 17 15 -19 15 13 -19 13 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 16 18 -16 20 18 -16 18 16 -16 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -16 -16 -16 16 -16 -14 16 -14 -12 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 20 -20 18 16 -20 16 14 -20 14 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 17 19 -17 21 19 -17 19 17 -17 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -16 -16 -16 16 -16 -14 16 -14 -12 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 21 -21 19 17 -21 17 15 -21 15 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 18 20 -18 22 20 -18 20 18 -18 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -16 -16 -16 16 -16 -14 16 -14 -12 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 22 -22 20 18 -22 18 16 -22 16 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 19 21 -19 23 21 -19 21 19 -19 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -16 -16 -16 16 -16 -14 16 -14 -12 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 23 -23 21 19 -23 19 17 -23 17 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 20 22 -20 24 22 -20 22 20 -20 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -16 -16 -16 16 -16 -14 16 -14 -12 
+[branch ID: 3] -- outcome: 1-- ghr: 109 -- weight: 24 -24 22 20 -24 20 18 -24 18 
+[branch ID: 1] -- outcome: 1-- ghr: 182 -- weight: 21 23 -21 25 23 -21 23 21 -21 
+[branch ID: 2] -- outcome: -1-- ghr: 219 -- weight: -16 -16 -16 16 -16 -14 16 -14 -12 
+[branch ID: 3] -- outcome: -1-- ghr: 109 -- weight: 23 -23 21 19 -23 19 17 -23 17 
+
