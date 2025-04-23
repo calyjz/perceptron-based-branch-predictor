@@ -1,0 +1,46 @@
+        CMPUT 229 Laboratory Assignment - Perceptron Based Branch Predictor
+        ===================================================================
+
+Final Mark:     98.94 /100 MARKS TOTAL
+                =====
+
+Part 1: 78.94 /80 perceptron_predictor.s
+
+Part 2:    20 /20 Program Style
+
+------------------------------------------------------------------------
+Part 1: perceptron_predictor.s
+
+Total: 78.94 /80
+The categories in this section will be graded by unit tests.
+
+78.94 /80 Perceptron Predictor Functions
+
+       20 /20 perceptronPredictor
+        * Correctly ran the perceptron branch predictor on the input function and printed the expected output.
+
+    11.86 /12 fill_insertionIndicatorsArray
+        * Correctly fills the insertionIndicatorsArray.
+
+       12 /12 fill_numPriorInsertionsArray
+        * Correctly fills the numPriorInsertionsArray.
+
+       12 /12 fill_modifiedInstructionsArray
+        * Correctly fills the modifiedInstructionsArray
+
+       12 /12 makePrediction
+        * Correctly makes predictions for a branch outcome.
+
+    11.08 /12 trainPredictor
+        * Correctly updates the weights for a branch's perceptron based on the actual branch outcome.
+
+------------------------------------------------------------------------
+Part 2: Program Style
+
+Total:    20 /20
+Some common deductions will include: (5 marks per deduction)
+    No function descriptions
+    No program header
+    No explanation for register usage
+    No block comments
+
