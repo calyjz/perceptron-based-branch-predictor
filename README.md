@@ -1,3 +1,3 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/aO0TiY4X)
-# Lab_PerceptronPredictor_Base
-Base for lab Lab_PerceptronPredictor
+This was an assignment for CMPUT 229: Computer Organization and Architecture. 
+
+The assignment description can be found here: [CMPUT 229 Labs: Perceptron Predictor](https://cmput229.github.io/229-labs-RISCV/Labs/6/Lab_PerceptronPredictor_Public/Instructions/index.html)
